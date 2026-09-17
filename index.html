@@ -40,7 +40,7 @@
         <!-- Child Profile Selector Tabs -->
         <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
 
-        <!-- 24-Hour Pediatrician Summary Card -->
+        <!-- 24-Hour Pediatrician Summary Card (Interactive) -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
@@ -50,17 +50,25 @@
                 <span class="text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-500 px-2 py-0.5 rounded-full">Pediatrician View</span>
             </div>
             <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="bg-blue-50/60 rounded-xl p-2.5">
+                <!-- Formula Card -->
+                <div onclick="openSummaryDetail('formula')" class="bg-blue-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer hover:bg-blue-100/60">
                     <i data-lucide="droplet" class="w-4 h-4 text-blue-500 mx-auto mb-1"></i>
                     <div id="summaryFormula" class="font-bold text-sm text-gray-800">0.0 oz</div>
                     <div class="text-[10px] text-gray-500 font-medium">Formula</div>
                 </div>
-                <div class="bg-purple-50/60 rounded-xl p-2.5">
+                <!-- Sleep Card (Clickable to Calendar View) -->
+                <div onclick="openSleepCalendarModal()" class="bg-purple-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer hover:bg-purple-100/60 relative group">
+                    <div class="absolute -top-1 -right-1 bg-purple-500 text-white rounded-full p-0.5 shadow-xs">
+                        <i data-lucide="calendar" class="w-2.5 h-2.5"></i>
+                    </div>
                     <i data-lucide="moon" class="w-4 h-4 text-purple-500 mx-auto mb-1"></i>
                     <div id="summarySleep" class="font-bold text-sm text-gray-800">0.0h</div>
-                    <div class="text-[10px] text-gray-500 font-medium">Sleep</div>
+                    <div class="text-[10px] text-purple-600 font-semibold flex items-center justify-center gap-0.5">
+                        Sleep <i data-lucide="chevron-right" class="w-2.5 h-2.5"></i>
+                    </div>
                 </div>
-                <div class="bg-orange-50/60 rounded-xl p-2.5">
+                <!-- Diapers Card -->
+                <div onclick="openSummaryDetail('diaper')" class="bg-orange-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer hover:bg-orange-100/60">
                     <i data-lucide="layers" class="w-4 h-4 text-orange-400 mx-auto mb-1"></i>
                     <div id="summaryDiapers" class="font-bold text-sm text-gray-800">0W / 0D</div>
                     <div class="text-[10px] text-gray-500 font-medium">Diapers</div>
@@ -75,13 +83,13 @@
         <div id="instantDiaperSection" class="space-y-1.5">
             <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">Instant Diaper Log</span>
             <div class="grid grid-cols-3 gap-2">
-                <button onclick="quickDiaper('Wet')" class="bg-blue-50 text-blue-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
+                <button onclick="quickDiaper('Wet')" class="bg-blue-50 text-blue-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-xs">
                     <i data-lucide="droplet" class="w-3.5 h-3.5"></i> Wet
                 </button>
-                <button onclick="quickDiaper('Dirty')" class="bg-amber-50 text-amber-700 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
+                <button onclick="quickDiaper('Dirty')" class="bg-amber-50 text-amber-700 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-xs">
                     <i data-lucide="circle" class="w-3.5 h-3.5"></i> Dirty
                 </button>
-                <button onclick="quickDiaper('Both')" class="bg-purple-50 text-purple-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
+                <button onclick="quickDiaper('Both')" class="bg-purple-50 text-purple-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-xs">
                     <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Both
                 </button>
             </div>
@@ -145,7 +153,6 @@
             statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
             statusDot.title = "Syncing...";
 
-            // Save immediately to local cache for instant UI feedback
             localStorage.setItem('babyTrackerState', JSON.stringify(state));
             render();
 
@@ -191,11 +198,11 @@
         }
 
         function render() {
-            lucide.createIcons();
             renderChildSelector();
             renderSummary();
             renderActionGrid();
             renderLogs();
+            lucide.createIcons();
         }
 
         function renderChildSelector() {
@@ -373,6 +380,126 @@
                 notes: 'Quick Log'
             });
             saveData();
+        }
+
+        // --- Interactive Dashboard Details / Sleep Calendar Graph Modal ---
+        function openSummaryDetail(type) {
+            const modal = document.getElementById('appModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            modal.classList.remove('hidden');
+
+            const logs = filteredLogs().filter(l => l.type === type && l.startTime >= Date.now() - 86400000);
+            
+            if (type === 'formula') {
+                title.innerText = "24-Hour Formula Breakdown";
+                const total = logs.reduce((sum, l) => sum + (l.amount || 0), 0);
+                let listHtml = logs.length === 0 ? `<div class="text-center py-6 text-gray-400 text-xs">No formula logs in the last 24 hours.</div>` : '';
+                logs.sort((a,b) => b.startTime - a.startTime).forEach(l => {
+                    listHtml += `
+                        <div class="bg-white p-3 rounded-xl flex justify-between items-center border border-gray-100">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><i data-lucide="droplet" class="w-3.5 h-3.5"></i></div>
+                                <div><div class="text-xs font-bold text-gray-800">${l.amount} oz</div><div class="text-[10px] text-gray-400">${formatTime(l.startTime)}</div></div>
+                            </div>
+                            <span class="text-xs text-gray-500">${l.notes || ''}</span>
+                        </div>
+                    `;
+                });
+                body.innerHTML = `<div class="text-center pb-2"><span class="text-2xl font-bold text-blue-600">${total.toFixed(1)} oz</span><div class="text-xs text-gray-500">Total past 24 hours</div></div><div class="space-y-2 max-h-60 overflow-y-auto">${listHtml}</div><button onclick="closeModal()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl">Close</button>`;
+            } else if (type === 'diaper') {
+                title.innerText = "24-Hour Diaper Breakdown";
+                const wetCount = logs.filter(l => l.diaperType === 'Wet' || l.diaperType === 'Both').length;
+                const dirtyCount = logs.filter(l => l.diaperType === 'Dirty' || l.diaperType === 'Both').length;
+                let listHtml = logs.length === 0 ? `<div class="text-center py-6 text-gray-400 text-xs">No diaper logs in the last 24 hours.</div>` : '';
+                logs.sort((a,b) => b.startTime - a.startTime).forEach(l => {
+                    listHtml += `
+                        <div class="bg-white p-3 rounded-xl flex justify-between items-center border border-gray-100">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-full bg-orange-100 text-orange-500 flex items-center justify-center"><i data-lucide="layers" class="w-3.5 h-3.5"></i></div>
+                                <div><div class="text-xs font-bold text-gray-800">${l.diaperType} Diaper</div><div class="text-[10px] text-gray-400">${formatTime(l.startTime)}</div></div>
+                            </div>
+                            <span class="text-xs text-gray-500">${l.notes || ''}</span>
+                        </div>
+                    `;
+                });
+                body.innerHTML = `<div class="grid grid-cols-2 gap-2 text-center pb-2"><div class="bg-blue-50 p-3 rounded-xl"><div class="text-xl font-bold text-blue-600">${wetCount}</div><div class="text-[10px] text-gray-500">Wet</div></div><div class="bg-amber-50 p-3 rounded-xl"><div class="text-xl font-bold text-amber-700">${dirtyCount}</div><div class="text-[10px] text-gray-500">Dirty</div></div></div><div class="space-y-2 max-h-60 overflow-y-auto">${listHtml}</div><button onclick="closeModal()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl">Close</button>`;
+            }
+            lucide.createIcons();
+        }
+
+        // --- Sleep Calendar Timeline Modal ---
+        function openSleepCalendarModal() {
+            const modal = document.getElementById('appModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            modal.classList.remove('hidden');
+            title.innerText = "Sleep Calendar Timeline (Past 3 Days)";
+
+            const sleepLogs = filteredLogs().filter(l => l.type === 'sleep' && l.startTime >= Date.now() - (3 * 86400000));
+            sleepLogs.sort((a, b) => b.startTime - a.startTime);
+
+            let timelineHtml = '';
+            if (sleepLogs.length === 0) {
+                timelineHtml = `<div class="text-center py-8 text-gray-400 text-xs">No sleep logs recorded in the past 3 days.</div>`;
+            } else {
+                // Group by date string
+                const grouped = {};
+                sleepLogs.forEach(l => {
+                    const dateKey = new Date(l.startTime).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                    if(!grouped[dateKey]) grouped[dateKey] = [];
+                    grouped[dateKey].push(l);
+                });
+
+                for (const [dateStr, logs] of Object.entries(grouped)) {
+                    timelineHtml += `
+                        <div class="bg-white rounded-2xl p-3.5 border border-gray-100 space-y-2">
+                            <div class="text-xs font-bold text-purple-700 uppercase tracking-wider border-b border-gray-100 pb-1.5 flex items-center justify-between">
+                                <span>${dateStr}</span>
+                                <span class="text-[10px] text-gray-400 font-normal">${logs.length} session(s)</span>
+                            </div>
+                            <div class="space-y-2">
+                    `;
+                    logs.forEach(l => {
+                        const start = new Date(l.startTime);
+                        const end = l.endTime ? new Date(l.endTime) : new Date();
+                        const durationStr = formatDuration(end - l.startTime);
+                        
+                        // Calculate visual offset percentage for 24-hr day representation
+                        const startHourDecimal = start.getHours() + (start.getMinutes() / 60);
+                        const leftPercent = Math.max(0, Math.min(100, (startHourDecimal / 24) * 100));
+                        const durationHours = (end - l.startTime) / 3600000;
+                        const widthPercent = Math.max(3, Math.min(100 - leftPercent, (durationHours / 24) * 100));
+
+                        timelineHtml += `
+                            <div class="bg-purple-50/60 p-2.5 rounded-xl space-y-1.5">
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="font-bold text-gray-800 flex items-center gap-1">
+                                        <i data-lucide="moon" class="w-3.5 h-3.5 text-purple-500"></i>
+                                        ${formatTime(l.startTime)} – ${l.endTime ? formatTime(l.endTime) : 'Ongoing'}
+                                    </span>
+                                    <span class="font-semibold text-purple-600 bg-purple-100/80 px-2 py-0.5 rounded-md text-[10px]">${durationStr}</span>
+                                </div>
+                                <!-- Visual Calendar Event Block -->
+                                <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden relative">
+                                    <div class="absolute top-0 bottom-0 bg-purple-500 rounded-full" style="left: ${leftPercent}%; width: ${widthPercent}%;"></div>
+                                </div>
+                                ${l.notes ? `<div class="text-[11px] text-gray-500 italic">"${l.notes}"</div>` : ''}
+                            </div>
+                        `;
+                    });
+                    timelineHtml += `</div></div>`;
+                }
+            }
+
+            body.innerHTML = `
+                <div class="space-y-3 max-h-[65vh] overflow-y-auto no-scrollbar pr-0.5">
+                    <div class="text-[11px] text-gray-500 text-center">Calendar event blocks mapping sleep intervals across a 24-hour horizontal timeline.</div>
+                    ${timelineHtml}
+                </div>
+                <button onclick="closeModal()" class="w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-sm">Done</button>
+            `;
+            lucide.createIcons();
         }
 
         // --- Live Nursing Timer ---
@@ -740,6 +867,7 @@
                     <button onclick="closeModal()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl mt-4">Done</button>
                 </div>
             `;
+            lucide.createIcons();
         }
 
         function updateChildName(id, name) {
