@@ -1037,14 +1037,15 @@
             `;
         }
 
-        function updateLog(logId) {
+                function updateLog(logId) {
             const log = state.logs.find(l => l.id === logId);
             if(!log) return;
 
             log.notes = document.getElementById('editNotes')?.value || '';
 
             if (log.type === 'bottle') {
-                log.amount = parseFloat(document.getElementById('editBottleAmount').value) => 0 ? parseFloat(document.getElementById('editBottleAmount').value) : 0;
+                const parsedAmount = parseFloat(document.getElementById('editBottleAmount').value);
+                log.amount = parsedAmount >= 0 ? parsedAmount : 0;
             } else if (log.type === 'diaper') {
                 log.diaperType = document.getElementById('editDiaperType').value;
             } else if (log.type === 'nursing') {
@@ -1061,6 +1062,8 @@
 
             closeModal();
             saveData();
+        }
+
         }
 
         function deleteLog(logId) {
