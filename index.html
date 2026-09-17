@@ -63,7 +63,7 @@
             </div>
         </div>
 
-        <!-- Dynamic Action Buttons Grid based on Child settings -->
+        <!-- Dynamic Action Buttons Grid -->
         <div id="actionGrid" class="grid grid-cols-2 gap-3"></div>
 
         <!-- Instant Diaper Log Chips -->
@@ -107,8 +107,6 @@
             selectedChildId: '1',
             logs: []
         };
-
-        let timerInterval = null;
 
         function saveData() {
             localStorage.setItem('babyTrackerState', JSON.stringify(state));
@@ -280,7 +278,6 @@
             modal.classList.remove('hidden');
             title.innerText = "Live Nursing Timer";
 
-            let seconds = 0, isRunning = true;
             body.innerHTML = `
                 <div class="space-y-4 text-center">
                     <select id="nursingSide" class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
@@ -294,7 +291,7 @@
                         <button onclick="resetNursingTimer()" class="bg-gray-200 text-gray-700 font-bold px-4 py-3 rounded-xl">Reset</button>
                     </div>
                     <input id="nursingNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base">
-                    <button onclick="saveNursingTimer(${Date.now()})" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl shadow-sm">Save Entry</button>
+                    <button onclick="saveNursingTimer()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl shadow-sm">Save Entry</button>
                 </div>
             `;
 
@@ -319,7 +316,7 @@
         }
         window.resetNursingTimer = function() { window.nursingElapsed = 0; }
 
-        function saveNursingTimer(startTimestamp) {
+        function saveNursingTimer() {
             clearInterval(window.nursingInterval);
             const durationMs = (window.nursingElapsed || 0) * 1000;
             const child = getActiveChild();
@@ -487,7 +484,40 @@
             saveData();
         }
 
-        // --- Settings Modal (Manage Children & Toggles) ---
+        // --- Data Export & Import Functions ---
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `baby_tracker_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState && importedState.children && importedState.logs) {
+                        state = importedState;
+                        saveData();
+                        alert("Data successfully imported!");
+                        closeModal();
+                    } else {
+                        alert("Invalid backup file format.");
+                    }
+                } catch (err) {
+                    alert("Error parsing JSON file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Settings Modal (Manage Children, Toggles & Backup) ---
         function openSettings() {
             const modal = document.getElementById('appModal');
             const title = document.getElementById('modalTitle');
@@ -515,6 +545,18 @@
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Child Profiles</h4>
                     ${childrenHtml}
                     <button onclick="addChildProfile()" class="w-full bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-sm">+ Add Child Profile</button>
+                    
+                    <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100 mt-4">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Backup & Sync</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="exportData()" class="bg-gray-100 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 transition">Export JSON</button>
+                            <label class="bg-gray-100 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 transition text-center cursor-pointer flex items-center justify-center">
+                                Import JSON
+                                <input type="file" accept=".json" onchange="importData(event)" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+
                     <button onclick="closeModal()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl mt-4">Done</button>
                 </div>
             `;
