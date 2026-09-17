@@ -46,6 +46,23 @@
         </div>
     </div>
 
+    <!-- Child Selection Overlay (Appears immediately after login if children exist) -->
+    <div id="childSelectScreen" class="fixed inset-0 bg-[#f2f2f7] z-40 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl border border-gray-100 space-y-5 text-center">
+            <div class="w-14 h-14 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
+                <i data-lucide="baby" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Who are we tracking?</h2>
+                <p class="text-xs text-gray-500 mt-1">Select a child profile or view all.</p>
+            </div>
+            <div id="loginChildOptions" class="space-y-2"></div>
+            <button onclick="proceedToAllChildren()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl transition text-xs">
+                View All Children
+            </button>
+        </div>
+    </div>
+
     <!-- Top Navigation Header -->
     <header class="sticky top-0 z-30 bg-[#f2f2f7]/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2">
@@ -65,12 +82,12 @@
         <!-- Child Profile Selector Tabs -->
         <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
 
-        <!-- 24-Hour Summary Card -->
+        <!-- Dashboard Card (Renamed from 24-Hour Summary) -->
         <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
-                    <i data-lucide="cross" class="w-4 h-4"></i>
-                    <span>24-Hour Summary</span>
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>Dashboard (Past 24h)</span>
                 </div>
             </div>
             <div class="grid grid-cols-3 gap-2 text-center">
@@ -172,7 +189,7 @@
         let currentUser = localStorage.getItem('babyTrackerCurrentUser') || '';
         let state = {
             children: [{ id: '1', name: 'Baby', birthdate: '', showNursing: true, showBottle: true, showDiaper: true, showSleep: true, activeSleepStart: null, lastConfettiTime: null }],
-            selectedChildId: '1',
+            selectedChildId: null,
             logs: []
         };
 
@@ -185,7 +202,7 @@
             lucide.createIcons();
             if (currentUser) {
                 document.getElementById('loginScreen').classList.add('hidden');
-                loadData();
+                loadData(true); // Trigger login child selection prompt
             } else {
                 document.getElementById('loginScreen').classList.remove('hidden');
             }
@@ -200,13 +217,14 @@
             currentUser = usernameInput;
             localStorage.setItem('babyTrackerCurrentUser', currentUser);
             document.getElementById('loginScreen').classList.add('hidden');
-            loadData();
+            loadData(true);
         }
 
         function logout() {
             localStorage.removeItem('babyTrackerCurrentUser');
             currentUser = '';
             document.getElementById('loginUser').value = '';
+            document.getElementById('childSelectScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
         }
 
@@ -214,7 +232,7 @@
             return `babyTrackerState_${currentUser || 'default'}`;
         }
 
-        async function loadData() {
+        async function loadData(promptChildSelect = false) {
             const statusDot = document.getElementById('syncStatus');
             const storageKey = getStorageKey();
             
@@ -225,12 +243,13 @@
                     state = JSON.parse(local); 
                     render();
                     checkBirthdayCelebration();
+                    if (promptChildSelect) showChildSelectPrompt();
                 } catch(e) {
                     console.error("Error parsing local storage", e);
                 }
             }
 
-            // 2. Try fetching updates from cloud (appending user query param if script supports it)
+            // 2. Try fetching updates from cloud
             try {
                 statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
                 statusDot.title = "Syncing...";
@@ -243,6 +262,7 @@
                     localStorage.setItem(storageKey, JSON.stringify(state));
                     render();
                     checkBirthdayCelebration();
+                    if (promptChildSelect) showChildSelectPrompt();
                 }
                 
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
@@ -250,7 +270,33 @@
             } catch (err) {
                 statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
                 statusDot.title = "Offline Mode (Using Local Device Data)";
+                if (promptChildSelect) showChildSelectPrompt();
             }
+        }
+
+        function showChildSelectPrompt() {
+            const screen = document.getElementById('childSelectScreen');
+            const container = document.getElementById('loginChildOptions');
+            let html = '';
+            
+            state.children.forEach(child => {
+                html += `<button onclick="selectChildAndDismiss('${child.id}')" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2"><i data-lucide="baby" class="w-4 h-4"></i> ${child.name}</button>`;
+            });
+            container.innerHTML = html;
+            screen.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function selectChildAndDismiss(id) {
+            state.selectedChildId = id;
+            document.getElementById('childSelectScreen').classList.add('hidden');
+            saveData();
+        }
+
+        function proceedToAllChildren() {
+            state.selectedChildId = null;
+            document.getElementById('childSelectScreen').classList.add('hidden');
+            saveData();
         }
 
         async function saveData() {
@@ -260,11 +306,9 @@
             statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
             statusDot.title = "Saving...";
 
-            // 1. Save immediately to browser storage under specific user key
             localStorage.setItem(storageKey, JSON.stringify(state));
             render();
 
-            // 2. Try syncing to Google Sheet in background with user tag
             try {
                 const payload = { user: currentUser, data: state };
                 await fetch(SCRIPT_URL, {
@@ -316,7 +360,7 @@
 
         function renderChildSelector() {
             const container = document.getElementById('childSelector');
-            let html = `<button onclick="selectChild(null)" class="px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${!state.selectedChildId ? 'bg-rose-500 text-white' : 'bg-white text-gray-700 shadow-xs'}">All Children</button>`;
+            let html = `<button onclick="selectChild(null)" class="px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${state.selectedChildId === null ? 'bg-rose-500 text-white' : 'bg-white text-gray-700 shadow-xs'}">All Children</button>`;
             
             state.children.forEach(child => {
                 const isSelected = state.selectedChildId === child.id;
@@ -391,10 +435,21 @@
             const formula = recent.filter(l => l.type === 'bottle').reduce((acc, l) => acc + (l.amount || 0), 0);
             const wet = recent.filter(l => l.type === 'diaper' && (l.diaperType === 'Wet' || l.diaperType === 'Both')).length;
             const dirty = recent.filter(l => l.type === 'diaper' && (l.diaperType === 'Dirty' || l.diaperType === 'Both')).length;
-            const sleepMs = recent.filter(l => l.type === 'sleep').reduce((acc, l) => acc + ((l.endTime || Date.now()) - l.startTime), 0);
+            
+            // Corrected sleep calculation: Sum overlap duration within the past 24 hours
+            let totalSleepMs = 0;
+            recent.filter(l => l.type === 'sleep').forEach(l => {
+                const lStart = l.startTime;
+                const lEnd = l.endTime || Date.now();
+                const effectiveStart = Math.max(lStart, dayCutoff);
+                const effectiveEnd = Math.min(lEnd, Date.now());
+                if (effectiveEnd > effectiveStart) {
+                    totalSleepMs += (effectiveEnd - effectiveStart);
+                }
+            });
 
             document.getElementById('summaryFormula').innerText = formula.toFixed(1) + ' oz';
-            document.getElementById('summarySleep').innerText = (sleepMs / 3600000).toFixed(1) + 'h';
+            document.getElementById('summarySleep').innerText = (totalSleepMs / 3600000).toFixed(1) + 'h';
             document.getElementById('summaryDiapers').innerText = `${wet}W / ${dirty}D`;
         }
 
@@ -544,7 +599,7 @@
                                 <i data-lucide="${icon}" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <div class="text-sm font-bold text-gray-800 capitalize">${log.type} ${childObj && !state.selectedChildId ? '• ' + childObj.name : ''}</div>
+                                <div class="text-sm font-bold text-gray-800 capitalize">${log.type} ${childObj && state.selectedChildId === null ? '• ' + childObj.name : ''}</div>
                                 <div class="text-xs text-gray-500">${detail} ${log.notes ? '— ' + log.notes : ''}</div>
                             </div>
                         </div>
@@ -577,7 +632,7 @@
             modal.classList.remove('hidden');
             modalBox.className = "bg-[#f2f2f7] w-full max-w-md mx-auto rounded-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl";
 
-            const logs = state.logs.filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === type && l.startTime >= Date.now() - 86400000);
+            const logs = state.logs.filter(l => (state.selectedChildId === null || l.childId === state.selectedChildId) && l.type === type && l.startTime >= Date.now() - 86400000);
             
             if (type === 'formula') {
                 title.innerText = "24-Hour Formula Breakdown";
@@ -640,7 +695,7 @@
                 weekDays.push(d);
             }
 
-            const sleepLogs = state.logs.filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === 'sleep');
+            const sleepLogs = state.logs.filter(l => (state.selectedChildId === null || l.childId === state.selectedChildId) && l.type === 'sleep');
 
             let headerHtml = `<div class="grid grid-cols-8 border-b border-gray-200 pb-2 text-center font-bold text-xs text-gray-500 sticky top-0 bg-white z-20"><div>Time</div>`;
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -989,7 +1044,7 @@
             log.notes = document.getElementById('editNotes')?.value || '';
 
             if (log.type === 'bottle') {
-                log.amount = parseFloat(document.getElementById('editBottleAmount').value) || 0;
+                log.amount = parseFloat(document.getElementById('editBottleAmount').value) => 0 ? parseFloat(document.getElementById('editBottleAmount').value) : 0;
             } else if (log.type === 'diaper') {
                 log.diaperType = document.getElementById('editDiaperType').value;
             } else if (log.type === 'nursing') {
