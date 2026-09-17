@@ -40,14 +40,13 @@
         <!-- Child Profile Selector Tabs -->
         <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
 
-        <!-- 24-Hour Pediatrician Summary Card (Interactive) -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <!-- 24-Hour Summary Card (Dynamic / Conditionally Displayed) -->
+        <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
                     <i data-lucide="cross" class="w-4 h-4"></i>
                     <span>24-Hour Summary</span>
                 </div>
-                <span class="text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-500 px-2 py-0.5 rounded-full">Pediatrician View</span>
             </div>
             <div class="grid grid-cols-3 gap-2 text-center">
                 <!-- Formula Card -->
@@ -95,16 +94,44 @@
             </div>
         </div>
 
-        <!-- Recent Logs Feed -->
+        <!-- Recent Logs Feed with Filter & Sort Panel -->
         <div class="space-y-2 pt-2">
-            <h2 class="text-sm font-bold text-gray-800 px-1">Recent Logs</h2>
+            <div class="flex justify-between items-center px-1">
+                <h2 class="text-sm font-bold text-gray-800">Logs Feed</h2>
+                <button onclick="toggleFilterPanel()" class="text-xs font-semibold text-rose-500 flex items-center gap-1 bg-rose-50 px-2.5 py-1 rounded-full active:scale-95 transition">
+                    <i data-lucide="filter" class="w-3 h-3"></i> Filter & Sort
+                </button>
+            </div>
+
+            <!-- Collapsible Filter Panel -->
+            <div id="filterPanel" class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100 space-y-3 hidden">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filter by Type</label>
+                    <div id="logTypeFilters" class="flex gap-1.5 overflow-x-auto py-1.5 no-scrollbar"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">From Date</label>
+                        <input type="date" id="filterDateStart" onchange="updateLogFilters()" class="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs font-medium text-gray-700">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">To Date</label>
+                        <input type="date" id="filterDateEnd" onchange="updateLogFilters()" class="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs font-medium text-gray-700">
+                    </div>
+                </div>
+                <div class="flex justify-between items-center pt-1 border-t border-gray-100">
+                    <button onclick="resetFilters()" class="text-xs font-semibold text-gray-500 hover:text-gray-700">Reset Filters</button>
+                    <span id="activeFilterCount" class="text-[10px] font-bold text-rose-500"></span>
+                </div>
+            </div>
+
             <div id="logsContainer" class="space-y-2"></div>
         </div>
     </main>
 
-    <!-- Generic Modal Sheet -->
-    <div id="appModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end transition-opacity">
-        <div class="bg-[#f2f2f7] w-full max-w-md mx-auto rounded-t-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl">
+    <!-- Generic Centered Modal Popup -->
+    <div id="appModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-[#f2f2f7] w-full max-w-md mx-auto rounded-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl">
             <div class="flex justify-between items-center border-b border-gray-200 pb-3">
                 <h3 id="modalTitle" class="font-bold text-lg text-gray-900">Log Entry</h3>
                 <button onclick="closeModal()" class="text-gray-400 font-semibold text-sm">Cancel</button>
@@ -122,6 +149,11 @@
             selectedChildId: '1',
             logs: []
         };
+
+        // Filter state variables
+        let filterType = 'all';
+        let filterStartDate = '';
+        let filterEndDate = '';
 
         // Initialize App by loading from Google Sheet (with localStorage fallback)
         async function loadData() {
@@ -201,6 +233,7 @@
             renderChildSelector();
             renderSummary();
             renderActionGrid();
+            renderFilterPanel();
             renderLogs();
             lucide.createIcons();
         }
@@ -248,14 +281,42 @@
         }
 
         function filteredLogs() {
-            if (!state.selectedChildId) return state.logs;
-            return state.logs.filter(l => l.childId === state.selectedChildId);
+            let logs = state.logs;
+            if (state.selectedChildId) {
+                logs = logs.filter(l => l.childId === state.selectedChildId);
+            }
+            // Type filter
+            if (filterType !== 'all') {
+                logs = logs.filter(l => l.type === filterType);
+            }
+            // Date range filter
+            if (filterStartDate) {
+                const startMs = new Date(filterStartDate + 'T00:00:00').getTime();
+                logs = logs.filter(l => l.startTime >= startMs);
+            }
+            if (filterEndDate) {
+                const endMs = new Date(filterEndDate + 'T23:59:59').getTime();
+                logs = logs.filter(l => l.startTime <= endMs);
+            }
+            return logs;
         }
 
         function renderSummary() {
-            const logs = filteredLogs();
-            const cutoff = Date.now() - 86400000;
-            const recent = logs.filter(l => l.startTime >= cutoff);
+            const logs = state.logs.filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
+            const weekCutoff = Date.now() - (7 * 86400000);
+            const weekLogs = logs.filter(l => l.startTime >= weekCutoff);
+            
+            const summaryContainer = document.getElementById('summaryCardContainer');
+            
+            if (weekLogs.length === 0) {
+                summaryContainer.classList.add('hidden');
+                return;
+            } else {
+                summaryContainer.classList.remove('hidden');
+            }
+
+            const dayCutoff = Date.now() - 86400000;
+            const recent = logs.filter(l => l.startTime >= dayCutoff);
 
             const formula = recent.filter(l => l.type === 'bottle').reduce((acc, l) => acc + (l.amount || 0), 0);
             const wet = recent.filter(l => l.type === 'diaper' && (l.diaperType === 'Wet' || l.diaperType === 'Both')).length;
@@ -324,19 +385,75 @@
             grid.innerHTML = html;
         }
 
+        function toggleFilterPanel() {
+            const panel = document.getElementById('filterPanel');
+            panel.classList.toggle('hidden');
+        }
+
+        function renderFilterPanel() {
+            const types = [
+                { id: 'all', label: 'All Types' },
+                { id: 'nursing', label: 'Nursing' },
+                { id: 'sleep', label: 'Sleep' },
+                { id: 'bottle', label: 'Bottle' },
+                { id: 'diaper', label: 'Diaper' }
+            ];
+            const container = document.getElementById('logTypeFilters');
+            if (!container) return;
+            let html = '';
+            types.forEach(t => {
+                const isActive = filterType === t.id;
+                html += `<button onclick="setFilterType('${t.id}')" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${isActive ? 'bg-rose-500 text-white shadow-xs' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">${t.label}</button>`;
+            });
+            container.innerHTML = html;
+
+            document.getElementById('filterDateStart').value = filterStartDate;
+            document.getElementById('filterDateEnd').value = filterEndDate;
+
+            let count = 0;
+            if (filterType !== 'all') count++;
+            if (filterStartDate) count++;
+            if (filterEndDate) count++;
+            const badge = document.getElementById('activeFilterCount');
+            if (badge) badge.innerText = count > 0 ? `${count} active filter(s)` : '';
+        }
+
+        function setFilterType(type) {
+            filterType = type;
+            renderFilterPanel();
+            renderLogs();
+        }
+
+        function updateLogFilters() {
+            filterStartDate = document.getElementById('filterDateStart').value;
+            filterEndDate = document.getElementById('filterDateEnd').value;
+            renderFilterPanel();
+            renderLogs();
+        }
+
+        function resetFilters() {
+            filterType = 'all';
+            filterStartDate = '';
+            filterEndDate = '';
+            document.getElementById('filterDateStart').value = '';
+            document.getElementById('filterDateEnd').value = '';
+            renderFilterPanel();
+            renderLogs();
+        }
+
         function renderLogs() {
             const container = document.getElementById('logsContainer');
             const logs = filteredLogs();
 
             if (logs.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs">No logs yet. Tap an action above to start.</div>`;
+                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs bg-white rounded-2xl border border-gray-100">No matching logs found.</div>`;
                 return;
             }
 
             let html = '';
             logs.sort((a,b) => b.startTime - a.startTime).forEach(log => {
                 const childObj = state.children.find(c => c.id === log.childId);
-                const timeStr = formatTime(log.startTime);
+                const timeStr = new Date(log.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + formatTime(log.startTime);
                 
                 let icon = 'droplet', color = 'bg-blue-500', detail = '';
                 if(log.type === 'nursing') { icon = 'heart'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'} (${formatDuration(((log.endTime || log.startTime) - log.startTime))})`; }
@@ -357,11 +474,11 @@
                                 <i data-lucide="${icon}" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <div class="text-sm font-bold text-gray-800 capitalize">${log.type} ${childObj ? '• ' + childObj.name : ''}</div>
+                                <div class="text-sm font-bold text-gray-800 capitalize">${log.type} ${childObj && !state.selectedChildId ? '• ' + childObj.name : ''}</div>
                                 <div class="text-xs text-gray-500">${detail} ${log.notes ? '— ' + log.notes : ''}</div>
                             </div>
                         </div>
-                        <div class="text-[11px] font-medium text-gray-400">${timeStr}</div>
+                        <div class="text-[11px] font-medium text-gray-400 text-right">${timeStr}</div>
                     </div>
                 `;
             });
@@ -389,7 +506,7 @@
             const body = document.getElementById('modalBody');
             modal.classList.remove('hidden');
 
-            const logs = filteredLogs().filter(l => l.type === type && l.startTime >= Date.now() - 86400000);
+            const logs = state.logs.filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === type && l.startTime >= Date.now() - 86400000);
             
             if (type === 'formula') {
                 title.innerText = "24-Hour Formula Breakdown";
@@ -436,14 +553,13 @@
             modal.classList.remove('hidden');
             title.innerText = "Sleep Calendar Timeline (Past 3 Days)";
 
-            const sleepLogs = filteredLogs().filter(l => l.type === 'sleep' && l.startTime >= Date.now() - (3 * 86400000));
+            const sleepLogs = state.logs.filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === 'sleep' && l.startTime >= Date.now() - (3 * 86400000));
             sleepLogs.sort((a, b) => b.startTime - a.startTime);
 
             let timelineHtml = '';
             if (sleepLogs.length === 0) {
                 timelineHtml = `<div class="text-center py-8 text-gray-400 text-xs">No sleep logs recorded in the past 3 days.</div>`;
             } else {
-                // Group by date string
                 const grouped = {};
                 sleepLogs.forEach(l => {
                     const dateKey = new Date(l.startTime).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
@@ -465,7 +581,6 @@
                         const end = l.endTime ? new Date(l.endTime) : new Date();
                         const durationStr = formatDuration(end - l.startTime);
                         
-                        // Calculate visual offset percentage for 24-hr day representation
                         const startHourDecimal = start.getHours() + (start.getMinutes() / 60);
                         const leftPercent = Math.max(0, Math.min(100, (startHourDecimal / 24) * 100));
                         const durationHours = (end - l.startTime) / 3600000;
@@ -480,7 +595,6 @@
                                     </span>
                                     <span class="font-semibold text-purple-600 bg-purple-100/80 px-2 py-0.5 rounded-md text-[10px]">${durationStr}</span>
                                 </div>
-                                <!-- Visual Calendar Event Block -->
                                 <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden relative">
                                     <div class="absolute top-0 bottom-0 bg-purple-500 rounded-full" style="left: ${leftPercent}%; width: ${widthPercent}%;"></div>
                                 </div>
