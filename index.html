@@ -40,7 +40,7 @@
         <!-- Child Profile Selector Tabs -->
         <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
 
-        <!-- 24-Hour Summary Card (Dynamic / Conditionally Displayed) -->
+        <!-- 24-Hour Summary Card -->
         <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
@@ -535,7 +535,7 @@
             lucide.createIcons();
         }
 
-        // --- Compact Weekly Sleep Calendar View (Shorter Hour Slots, h-8) ---
+        // --- Weekly Sleep Calendar View (Single Continuous Block Render) ---
         function openSleepCalendarModal() {
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -543,7 +543,7 @@
             const body = document.getElementById('modalBody');
             
             modal.classList.remove('hidden');
-            modalBox.className = "bg-white w-full max-w-3xl mx-auto rounded-3xl max-h-[92vh] overflow-y-auto p-4 space-y-3 shadow-xl";
+            modalBox.className = "bg-white w-full max-w-4xl mx-auto rounded-3xl max-h-[92vh] overflow-y-auto p-4 space-y-3 shadow-xl";
             title.innerText = "Weekly Sleep Calendar (Sun - Sat)";
 
             const now = new Date();
@@ -561,73 +561,84 @@
 
             const sleepLogs = state.logs.filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === 'sleep');
 
-            let headerHtml = `<div class="grid grid-cols-8 border-b border-gray-200 pb-1.5 text-center font-bold text-[11px] text-gray-500 sticky top-0 bg-white z-10"><div>Time</div>`;
+            let headerHtml = `<div class="grid grid-cols-8 border-b border-gray-200 pb-2 text-center font-bold text-xs text-gray-500 sticky top-0 bg-white z-20"><div>Time</div>`;
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             weekDays.forEach((d, idx) => {
                 const dateNum = `${d.getMonth()+1}/${d.getDate()}`;
-                headerHtml += `<div><div>${dayNames[idx]}</div><div class="text-[9px] text-gray-400 font-normal">${dateNum}</div></div>`;
+                headerHtml += `<div><div>${dayNames[idx]}</div><div class="text-[10px] text-gray-400 font-normal">${dateNum}</div></div>`;
             });
             headerHtml += `</div>`;
 
-            let gridRowsHtml = `<div class="space-y-0 relative">`;
+            const HOUR_HEIGHT = 36; // height per hour row in pixels
+            const TOTAL_HEIGHT = HOUR_HEIGHT * 24; // 864px total height for 24 hours
+
+            // Build time labels column
+            let timeLabelsHtml = `<div class="w-16 shrink-0 flex flex-col border-r border-gray-200 bg-gray-50/50">`;
             for(let hour = 0; hour < 24; hour++) {
-                const hourLabel = hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`;
-                
-                // Reduced height to h-8 (shorter rows)
-                gridRowsHtml += `
-                    <div class="grid grid-cols-8 border-b border-gray-100 h-8 items-center text-[10px]">
-                        <div class="text-gray-400 font-medium pr-1 text-right">${hourLabel}</div>
-                `;
+                const hourLabel = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
+                timeLabelsHtml += `<div class="text-[10px] text-gray-400 font-medium text-right pr-2 select-none flex items-center justify-end" style="height: ${HOUR_HEIGHT}px;">${hourLabel}</div>`;
+            }
+            timeLabelsHtml += `</div>`;
 
-                weekDays.forEach(day => {
-                    const dayStart = new Date(day);
-                    dayStart.setHours(hour, 0, 0, 0);
-                    const dayEnd = new Date(dayStart);
-                    dayEnd.setHours(hour + 1, 0, 0, 0);
+            // Background horizontal grid lines
+            let gridLinesHtml = `<div class="absolute inset-0 pointer-events-none flex flex-col">`;
+            for(let hour = 0; hour < 24; hour++) {
+                gridLinesHtml += `<div class="border-b border-gray-100 w-full" style="height: ${HOUR_HEIGHT}px;"></div>`;
+            }
+            gridLinesHtml += `</div>`;
 
-                    const matchingLogs = sleepLogs.filter(l => {
-                        const lStart = l.startTime;
-                        const lEnd = l.endTime || Date.now();
-                        return lStart < dayEnd.getTime() && lEnd > dayStart.getTime();
-                    });
+            // Build day columns
+            let columnsHtml = `<div class="grid grid-cols-7 flex-1 relative bg-white">`;
 
-                    gridRowsHtml += `<div class="relative h-full border-l border-gray-100 p-0.5 flex flex-col justify-between">`;
-                    
-                    matchingLogs.forEach(l => {
-                        const lStart = l.startTime;
-                        const lEnd = l.endTime || Date.now();
+            weekDays.forEach(day => {
+                const dayStart = day.getTime();
+                const dayEnd = dayStart + 86400000;
 
-                        const blockStartMs = dayStart.getTime();
-                        const blockEndMs = dayEnd.getTime();
-                        const effectiveStart = Math.max(lStart, blockStartMs);
-                        const effectiveEnd = Math.min(lEnd, blockEndMs);
-
-                        const topOffsetPercent = ((effectiveStart - blockStartMs) / 3600000) * 100;
-                        const heightPercent = Math.max(10, ((effectiveEnd - effectiveStart) / 3600000) * 100);
-
-                        gridRowsHtml += `
-                            <div onclick="openEditModal('${l.id}')" title="${formatTime(l.startTime)} - ${l.endTime ? formatTime(l.endTime) : 'Ongoing'}" 
-                                 class="absolute left-0.5 right-0.5 bg-purple-500 hover:bg-purple-600 text-white rounded px-0.5 overflow-hidden cursor-pointer shadow-xs transition text-[8px] font-semibold leading-tight flex items-center justify-center"
-                                 style="top: ${topOffsetPercent}%; height: ${heightPercent}%;">
-                                <span class="truncate">${formatTime(l.startTime)}</span>
-                            </div>
-                        `;
-                    });
-
-                    gridRowsHtml += `</div>`;
+                const dayLogs = sleepLogs.filter(l => {
+                    const lStart = l.startTime;
+                    const lEnd = l.endTime || Date.now();
+                    return lStart < dayEnd && lEnd > dayStart;
                 });
 
-                gridRowsHtml += `</div>`;
-            }
-            gridRowsHtml += `</div>`;
+                columnsHtml += `<div class="relative border-r border-gray-100" style="height: ${TOTAL_HEIGHT}px;">`;
+
+                dayLogs.forEach(l => {
+                    const lStart = l.startTime;
+                    const lEnd = l.endTime || Date.now();
+
+                    const effectiveStart = Math.max(lStart, dayStart);
+                    const effectiveEnd = Math.min(lEnd, dayEnd);
+
+                    const startMin = (effectiveStart - dayStart) / 60000;
+                    const durationMin = (effectiveEnd - effectiveStart) / 60000;
+
+                    const topPx = (startMin / 1440) * TOTAL_HEIGHT;
+                    const heightPx = Math.max(18, (durationMin / 1440) * TOTAL_HEIGHT);
+                    const timeStr = `${formatTime(l.startTime)} - ${l.endTime ? formatTime(l.endTime) : 'Ongoing'}`;
+
+                    columnsHtml += `
+                        <div onclick="openEditModal('${l.id}')" title="${timeStr}" 
+                             class="absolute left-1 right-1 bg-purple-500 hover:bg-purple-600 text-white rounded-lg px-1.5 py-0.5 overflow-hidden cursor-pointer shadow-xs transition text-[10px] font-semibold flex flex-col justify-start z-10"
+                             style="top: ${topPx}px; height: ${heightPx}px;">
+                            <div class="truncate">${formatTime(l.startTime)}</div>
+                            ${heightPx > 35 ? `<div class="text-[9px] font-normal opacity-90 truncate">${formatDuration(effectiveEnd - effectiveStart)}</div>` : ''}
+                        </div>
+                    `;
+                });
+
+                columnsHtml += `</div>`;
+            });
+            columnsHtml += `</div>`;
 
             body.innerHTML = `
                 <div class="space-y-2">
-                    <div class="text-[11px] text-gray-500 text-center">Compact 24-hour weekly sleep grid. Tap any block to inspect or edit.</div>
-                    <div class="overflow-x-auto border border-gray-200 rounded-2xl bg-white p-1">
-                        <div class="min-w-[620px]">
-                            ${headerHtml}
-                            ${gridRowsHtml}
+                    <div class="text-[11px] text-gray-500 text-center">Tap any sleep block to inspect or edit.</div>
+                    <div class="border border-gray-200 rounded-2xl bg-white overflow-hidden shadow-sm">
+                        ${headerHtml}
+                        <div class="flex overflow-y-auto max-h-[60vh] relative">
+                            ${gridLinesHtml}
+                            ${timeLabelsHtml}
+                            ${columnsHtml}
                         </div>
                     </div>
                 </div>
