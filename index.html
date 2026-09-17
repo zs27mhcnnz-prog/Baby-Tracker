@@ -202,7 +202,7 @@
             lucide.createIcons();
             if (currentUser) {
                 document.getElementById('loginScreen').classList.add('hidden');
-                loadData(true); // Trigger login child selection prompt
+                loadData(true);
             } else {
                 document.getElementById('loginScreen').classList.remove('hidden');
             }
@@ -436,7 +436,6 @@
             const wet = recent.filter(l => l.type === 'diaper' && (l.diaperType === 'Wet' || l.diaperType === 'Both')).length;
             const dirty = recent.filter(l => l.type === 'diaper' && (l.diaperType === 'Dirty' || l.diaperType === 'Both')).length;
             
-            // Corrected sleep calculation: Sum overlap duration within the past 24 hours
             let totalSleepMs = 0;
             recent.filter(l => l.type === 'sleep').forEach(l => {
                 const lStart = l.startTime;
@@ -1037,7 +1036,7 @@
             `;
         }
 
-                function updateLog(logId) {
+        function updateLog(logId) {
             const log = state.logs.find(l => l.id === logId);
             if(!log) return;
 
@@ -1062,8 +1061,6 @@
 
             closeModal();
             saveData();
-        }
-
         }
 
         function deleteLog(logId) {
