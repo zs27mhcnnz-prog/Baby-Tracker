@@ -150,12 +150,10 @@
             logs: []
         };
 
-        // Filter state variables
         let filterType = 'all';
         let filterStartDate = '';
         let filterEndDate = '';
 
-        // Initialize App by loading from Google Sheet (with localStorage fallback)
         async function loadData() {
             const statusDot = document.getElementById('syncStatus');
             try {
@@ -168,7 +166,6 @@
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
                 statusDot.title = "Synced with Google Sheet";
             } catch (err) {
-                console.log("Offline or cloud fetch failed, falling back to local cache.");
                 statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
                 statusDot.title = "Offline / Local Mode";
                 const local = localStorage.getItem('babyTrackerState');
@@ -198,13 +195,11 @@
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
                 statusDot.title = "Synced with Google Sheet";
             } catch (err) {
-                console.error("Failed to sync to Google Sheet:", err);
                 statusDot.className = "w-2 h-2 rounded-full bg-red-500";
                 statusDot.title = "Sync Failed (Saved Locally)";
             }
         }
 
-        // Live ticker for minimized sleep timer card
         setInterval(() => {
             const child = getActiveChild();
             if (child && child.activeSleepStart) {
@@ -265,11 +260,7 @@
             if (today.getMonth() + 1 === bMonth && today.getDate() === bDay) {
                 const oneHour = 3600000;
                 if (!child.lastConfettiTime || (Date.now() - child.lastConfettiTime > oneHour)) {
-                    confetti({
-                        particleCount: 120,
-                        spread: 80,
-                        origin: { y: 0.3 }
-                    });
+                    confetti({ particleCount: 120, spread: 80, origin: { y: 0.3 } });
                     child.lastConfettiTime = Date.now();
                     saveData();
                 }
@@ -497,7 +488,6 @@
             saveData();
         }
 
-        // --- Interactive Dashboard Details ---
         function openSummaryDetail(type) {
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -545,7 +535,7 @@
             lucide.createIcons();
         }
 
-        // --- Weekly Sleep Calendar View (Sunday Start, 12am-11:59pm Hourly Blocks) ---
+        // --- Compact Weekly Sleep Calendar View (Shorter Hour Slots, h-8) ---
         function openSleepCalendarModal() {
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -553,12 +543,11 @@
             const body = document.getElementById('modalBody');
             
             modal.classList.remove('hidden');
-            modalBox.className = "bg-white w-full max-w-3xl mx-auto rounded-3xl max-h-[92vh] overflow-y-auto p-5 space-y-4 shadow-xl";
-            title.innerText = "Weekly Sleep Calendar (Sunday - Saturday)";
+            modalBox.className = "bg-white w-full max-w-3xl mx-auto rounded-3xl max-h-[92vh] overflow-y-auto p-4 space-y-3 shadow-xl";
+            title.innerText = "Weekly Sleep Calendar (Sun - Sat)";
 
-            // Get current week starting Sunday
             const now = new Date();
-            const currentDayOfWeek = now.getDay(); // 0 is Sunday
+            const currentDayOfWeek = now.getDay();
             const sunday = new Date(now);
             sunday.setDate(now.getDate() - currentDayOfWeek);
             sunday.setHours(0, 0, 0, 0);
@@ -572,23 +561,22 @@
 
             const sleepLogs = state.logs.filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === 'sleep');
 
-            // Build grid headers (Days of week)
-            let headerHtml = `<div class="grid grid-cols-8 border-b border-gray-200 pb-2 text-center font-bold text-xs text-gray-500 sticky top-0 bg-white z-10"><div>Time</div>`;
+            let headerHtml = `<div class="grid grid-cols-8 border-b border-gray-200 pb-1.5 text-center font-bold text-[11px] text-gray-500 sticky top-0 bg-white z-10"><div>Time</div>`;
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             weekDays.forEach((d, idx) => {
                 const dateNum = `${d.getMonth()+1}/${d.getDate()}`;
-                headerHtml += `<div><div>${dayNames[idx]}</div><div class="text-[10px] text-gray-400 font-normal">${dateNum}</div></div>`;
+                headerHtml += `<div><div>${dayNames[idx]}</div><div class="text-[9px] text-gray-400 font-normal">${dateNum}</div></div>`;
             });
             headerHtml += `</div>`;
 
-            // Build 24 hours rows (0 to 23)
             let gridRowsHtml = `<div class="space-y-0 relative">`;
             for(let hour = 0; hour < 24; hour++) {
-                const hourLabel = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
+                const hourLabel = hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`;
                 
+                // Reduced height to h-8 (shorter rows)
                 gridRowsHtml += `
-                    <div class="grid grid-cols-8 border-b border-gray-100 h-12 items-center text-[11px]">
-                        <div class="text-gray-400 font-medium pr-2 text-right">${hourLabel}</div>
+                    <div class="grid grid-cols-8 border-b border-gray-100 h-8 items-center text-[10px]">
+                        <div class="text-gray-400 font-medium pr-1 text-right">${hourLabel}</div>
                 `;
 
                 weekDays.forEach(day => {
@@ -597,7 +585,6 @@
                     const dayEnd = new Date(dayStart);
                     dayEnd.setHours(hour + 1, 0, 0, 0);
 
-                    // Find sleep logs overlapping this hour
                     const matchingLogs = sleepLogs.filter(l => {
                         const lStart = l.startTime;
                         const lEnd = l.endTime || Date.now();
@@ -610,20 +597,19 @@
                         const lStart = l.startTime;
                         const lEnd = l.endTime || Date.now();
 
-                        // Calculate exact offset percentage within this 1-hour block (0 to 60 mins)
                         const blockStartMs = dayStart.getTime();
                         const blockEndMs = dayEnd.getTime();
                         const effectiveStart = Math.max(lStart, blockStartMs);
                         const effectiveEnd = Math.min(lEnd, blockEndMs);
 
                         const topOffsetPercent = ((effectiveStart - blockStartMs) / 3600000) * 100;
-                        const heightPercent = Math.max(12, ((effectiveEnd - effectiveStart) / 3600000) * 100);
+                        const heightPercent = Math.max(10, ((effectiveEnd - effectiveStart) / 3600000) * 100);
 
                         gridRowsHtml += `
                             <div onclick="openEditModal('${l.id}')" title="${formatTime(l.startTime)} - ${l.endTime ? formatTime(l.endTime) : 'Ongoing'}" 
-                                 class="absolute left-0.5 right-0.5 bg-purple-500 hover:bg-purple-600 text-white rounded-md p-1 overflow-hidden cursor-pointer shadow-xs transition text-[9px] font-semibold leading-tight flex flex-col justify-center"
+                                 class="absolute left-0.5 right-0.5 bg-purple-500 hover:bg-purple-600 text-white rounded px-0.5 overflow-hidden cursor-pointer shadow-xs transition text-[8px] font-semibold leading-tight flex items-center justify-center"
                                  style="top: ${topOffsetPercent}%; height: ${heightPercent}%;">
-                                <div class="truncate">${formatTime(l.startTime)}</div>
+                                <span class="truncate">${formatTime(l.startTime)}</span>
                             </div>
                         `;
                     });
@@ -636,21 +622,20 @@
             gridRowsHtml += `</div>`;
 
             body.innerHTML = `
-                <div class="space-y-3">
-                    <div class="text-xs text-gray-500 text-center">Interactive weekly timeline grid mapping sleep blocks from 12:00 AM to 11:59 PM. Tap any sleep block to inspect or edit.</div>
-                    <div class="overflow-x-auto border border-gray-200 rounded-2xl bg-white p-2">
-                        <div class="min-w-[650px]">
+                <div class="space-y-2">
+                    <div class="text-[11px] text-gray-500 text-center">Compact 24-hour weekly sleep grid. Tap any block to inspect or edit.</div>
+                    <div class="overflow-x-auto border border-gray-200 rounded-2xl bg-white p-1">
+                        <div class="min-w-[620px]">
                             ${headerHtml}
                             ${gridRowsHtml}
                         </div>
                     </div>
                 </div>
-                <button onclick="closeModal()" class="w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-sm">Done</button>
+                <button onclick="closeModal()" class="w-full bg-purple-600 text-white font-bold py-2.5 rounded-xl shadow-sm text-xs">Done</button>
             `;
             lucide.createIcons();
         }
 
-        // --- Live Nursing Timer ---
         function openNursingTimer() {
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -715,7 +700,6 @@
             saveData();
         }
 
-        // --- Live Sleep Timer ---
         function openSleepTimer() {
             const child = getActiveChild();
             if(!child) return;
@@ -779,7 +763,6 @@
             saveData();
         }
 
-        // --- Manual Logs (Bottle & Diaper) ---
         function openManualModal(type) {
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -837,7 +820,6 @@
             saveData();
         }
 
-        // --- Edit / Delete Log Modal ---
         function openEditModal(logId) {
             const log = state.logs.find(l => l.id === logId);
             if(!log) return;
@@ -943,7 +925,6 @@
             saveData();
         }
 
-        // --- Data Export & Import Functions ---
         function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
             const downloadAnchor = document.createElement('a');
@@ -976,7 +957,6 @@
             reader.readAsText(file);
         }
 
-        // --- Settings Modal ---
         function openSettings() {
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -1066,7 +1046,6 @@
             document.getElementById('appModal').classList.add('hidden');
         }
 
-        // Initialize App & Fetch Cloud Data on Load
         loadData();
     </script>
 </body>
