@@ -24,7 +24,10 @@
 
     <!-- Top Navigation Header -->
     <header class="sticky top-0 z-30 bg-[#f2f2f7]/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-        <h1 class="text-xl font-bold tracking-tight">Baby Tracker</h1>
+        <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight">Baby Tracker</h1>
+            <span id="syncStatus" class="w-2 h-2 rounded-full bg-amber-400" title="Syncing..."></span>
+        </div>
         <button onclick="openSettings()" class="w-8 h-8 rounded-full bg-gray-200/60 flex items-center justify-center text-gray-700 active:scale-95 transition">
             <i data-lucide="settings" class="w-4 h-4"></i>
         </button>
@@ -102,16 +105,75 @@
 
     <!-- Application JavaScript Logic -->
     <script>
-        let state = JSON.parse(localStorage.getItem('babyTrackerState')) || {
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQXwiSr4NpYe4sV0gdrhiGmbBskpXWkAzF0Zi2riS-UxuVjqgAI1_IydbLi3PovPk/exec";
+
+        let state = {
             children: [{ id: '1', name: 'Baby', showNursing: true, showBottle: true, showDiaper: true, showSleep: true, activeSleepStart: null }],
             selectedChildId: '1',
             logs: []
         };
 
-        function saveData() {
-            localStorage.setItem('babyTrackerState', JSON.stringify(state));
+        // Initialize App by loading from Google Sheet (with localStorage fallback)
+        async function loadData() {
+            const statusDot = document.getElementById('syncStatus');
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const cloudData = await response.json();
+                if (cloudData && cloudData.children && cloudData.logs) {
+                    state = cloudData;
+                    localStorage.setItem('babyTrackerState', JSON.stringify(state));
+                }
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                statusDot.title = "Synced with Google Sheet";
+            } catch (err) {
+                console.log("Offline or cloud fetch failed, falling back to local cache.");
+                statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
+                statusDot.title = "Offline / Local Mode";
+                const local = localStorage.getItem('babyTrackerState');
+                if (local) {
+                    try { state = JSON.parse(local); } catch(e) {}
+                }
+            }
             render();
         }
+
+        async function saveData() {
+            const statusDot = document.getElementById('syncStatus');
+            statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+            statusDot.title = "Syncing...";
+
+            // Save immediately to local cache for instant UI feedback
+            localStorage.setItem('babyTrackerState', JSON.stringify(state));
+            render();
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state)
+                });
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                statusDot.title = "Synced with Google Sheet";
+            } catch (err) {
+                console.error("Failed to sync to Google Sheet:", err);
+                statusDot.className = "w-2 h-2 rounded-full bg-red-500";
+                statusDot.title = "Sync Failed (Saved Locally)";
+            }
+        }
+
+        // Live ticker for minimized sleep timer card
+        setInterval(() => {
+            const child = getActiveChild();
+            if (child && child.activeSleepStart) {
+                const elapsed = Math.floor((Date.now() - child.activeSleepStart) / 1000);
+                const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+                const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+                const s = String(elapsed % 60).padStart(2, '0');
+                const minDisplay = document.getElementById('minimizedSleepDisplay');
+                if (minDisplay) minDisplay.innerText = `${h}:${m}:${s}`;
+            }
+        }, 1000);
 
         function render() {
             lucide.createIcons();
@@ -187,7 +249,7 @@
                     html += `
                         <button onclick="openSleepTimer()" class="bg-purple-50 border border-purple-200 p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-1 active:scale-95 transition">
                             <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><i data-lucide="moon-star" class="w-5 h-5 animate-pulse"></i></div>
-                            <span class="text-xs font-mono font-bold text-purple-900">${h}:${m}:${s}</span>
+                            <span id="minimizedSleepDisplay" class="text-xs font-mono font-bold text-purple-900">${h}:${m}:${s}</span>
                         </button>
                     `;
                 } else {
@@ -233,7 +295,7 @@
                 const timeStr = new Date(log.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 
                 let icon = 'droplet', color = 'bg-blue-500', detail = '';
-                if(log.type === 'nursing') { icon = 'heart'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'} (${Math.round((log.endTime - log.startTime)/60000)}m)`; }
+                if(log.type === 'nursing') { icon = 'heart'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'} (${Math.round(((log.endTime || log.startTime) - log.startTime)/60000)}m)`; }
                 if(log.type === 'sleep') { icon = 'moon'; color = 'bg-purple-500'; detail = log.endTime ? `${Math.round((log.endTime - log.startTime)/60000)} mins` : 'In Progress'; }
                 if(log.type === 'bottle') { icon = 'droplet'; color = 'bg-blue-500'; detail = `${log.amount} oz`; }
                 if(log.type === 'diaper') { icon = 'layers'; color = 'bg-orange-400'; detail = `Type: ${log.diaperType}`; }
@@ -451,7 +513,7 @@
             saveData();
         }
 
-        // --- Edit / Delete Log Modal ---
+        // --- Edit / Delete Log Modal (Fully Editable Values) ---
         function openEditModal(logId) {
             const log = state.logs.find(l => l.id === logId);
             if(!log) return;
@@ -461,7 +523,54 @@
             modal.classList.remove('hidden');
             title.innerText = `Edit ${log.type.charAt(0).toUpperCase() + log.type.slice(1)}`;
 
+            let specificFieldsHtml = '';
+
+            if (log.type === 'bottle') {
+                specificFieldsHtml = `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Amount (oz)</label>
+                        <input id="editBottleAmount" type="number" step="0.5" value="${log.amount || 4.0}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                    </div>
+                `;
+            } else if (log.type === 'diaper') {
+                specificFieldsHtml = `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Diaper Status</label>
+                        <select id="editDiaperType" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                            <option value="Wet" ${log.diaperType === 'Wet' ? 'selected' : ''}>Wet</option>
+                            <option value="Dirty" ${log.diaperType === 'Dirty' ? 'selected' : ''}>Dirty</option>
+                            <option value="Both" ${log.diaperType === 'Both' ? 'selected' : ''}>Both</option>
+                        </select>
+                    </div>
+                `;
+            } else if (log.type === 'nursing') {
+                const durationMins = Math.round(((log.endTime || log.startTime) - log.startTime) / 60000);
+                specificFieldsHtml = `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Side</label>
+                        <select id="editNursingSide" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                            <option value="Left" ${log.side === 'Left' ? 'selected' : ''}>Left Side</option>
+                            <option value="Right" ${log.side === 'Right' ? 'selected' : ''}>Right Side</option>
+                            <option value="Both" ${log.side === 'Both' ? 'selected' : ''}>Both Sides</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Duration (Minutes)</label>
+                        <input id="editNursingDuration" type="number" step="1" value="${durationMins}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                    </div>
+                `;
+            } else if (log.type === 'sleep') {
+                const sleepMins = log.endTime ? Math.round((log.endTime - log.startTime) / 60000) : 0;
+                specificFieldsHtml = `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Sleep Duration (Minutes)</label>
+                        <input id="editSleepDuration" type="number" step="1" value="${sleepMins}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                    </div>
+                `;
+            }
+
             body.innerHTML = `
+                ${specificFieldsHtml}
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Notes</label>
                     <input id="editNotes" type="text" value="${log.notes || ''}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base">
@@ -473,7 +582,23 @@
 
         function updateLog(logId) {
             const log = state.logs.find(l => l.id === logId);
-            if(log) log.notes = document.getElementById('editNotes').value;
+            if(!log) return;
+
+            log.notes = document.getElementById('editNotes')?.value || '';
+
+            if (log.type === 'bottle') {
+                log.amount = parseFloat(document.getElementById('editBottleAmount').value) || 0;
+            } else if (log.type === 'diaper') {
+                log.diaperType = document.getElementById('editDiaperType').value;
+            } else if (log.type === 'nursing') {
+                log.side = document.getElementById('editNursingSide').value;
+                const mins = parseFloat(document.getElementById('editNursingDuration').value) || 0;
+                log.endTime = log.startTime + (mins * 60000);
+            } else if (log.type === 'sleep') {
+                const mins = parseFloat(document.getElementById('editSleepDuration').value) || 0;
+                log.endTime = log.startTime + (mins * 60000);
+            }
+
             closeModal();
             saveData();
         }
@@ -505,7 +630,7 @@
                     if (importedState && importedState.children && importedState.logs) {
                         state = importedState;
                         saveData();
-                        alert("Data successfully imported!");
+                        alert("Data successfully imported and synced!");
                         closeModal();
                     } else {
                         alert("Invalid backup file format.");
@@ -517,7 +642,7 @@
             reader.readAsText(file);
         }
 
-        // --- Settings Modal (Manage Children, Toggles & Backup) ---
+        // --- Settings Modal ---
         function openSettings() {
             const modal = document.getElementById('appModal');
             const title = document.getElementById('modalTitle');
@@ -547,7 +672,7 @@
                     <button onclick="addChildProfile()" class="w-full bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-sm">+ Add Child Profile</button>
                     
                     <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100 mt-4">
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Backup & Sync</h4>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Cloud & Local Backup</h4>
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="exportData()" class="bg-gray-100 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 transition">Export JSON</button>
                             <label class="bg-gray-100 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 transition text-center cursor-pointer flex items-center justify-center">
@@ -593,8 +718,8 @@
             document.getElementById('appModal').classList.add('hidden');
         }
 
-        // Initialize App Render
-        render();
+        // Initialize App & Fetch Cloud Data on Load
+        loadData();
     </script>
 </body>
 </html>
