@@ -24,15 +24,40 @@
 </head>
 <body class="flex flex-col min-h-screen pb-12 select-none">
 
+    <!-- Login Screen Container -->
+    <div id="loginScreen" class="fixed inset-0 bg-[#f2f2f7] z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl border border-gray-100 space-y-5 text-center">
+            <div class="w-14 h-14 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
+                <i data-lucide="lock" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Welcome Back</h2>
+                <p class="text-xs text-gray-500 mt-1">Enter your profile name or PIN to load your specific logs.</p>
+            </div>
+            <div class="space-y-3 text-left">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Username / ID</label>
+                    <input id="loginUser" type="text" placeholder="e.g. Eric" class="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold text-gray-800">
+                </div>
+            </div>
+            <button onclick="handleLogin()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl shadow-sm transition active:scale-95 text-sm">
+                Unlock Tracker
+            </button>
+        </div>
+    </div>
+
     <!-- Top Navigation Header -->
     <header class="sticky top-0 z-30 bg-[#f2f2f7]/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2">
             <h1 class="text-xl font-bold tracking-tight">Baby Tracker</h1>
             <span id="syncStatus" class="w-2 h-2 rounded-full bg-amber-400" title="Syncing..."></span>
         </div>
-        <button onclick="openSettings()" class="w-8 h-8 rounded-full bg-gray-200/60 flex items-center justify-center text-gray-700 active:scale-95 transition">
-            <i data-lucide="settings" class="w-4 h-4"></i>
-        </button>
+        <div class="flex items-center gap-2">
+            <button onclick="logout()" class="text-xs font-semibold text-gray-500 bg-gray-200/60 px-3 py-1.5 rounded-full active:scale-95 transition">Logout</button>
+            <button onclick="openSettings()" class="w-8 h-8 rounded-full bg-gray-200/60 flex items-center justify-center text-gray-700 active:scale-95 transition">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+            </button>
+        </div>
     </header>
 
     <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 space-y-4">
@@ -144,6 +169,7 @@
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQXwiSr4NpYe4sV0gdrhiGmbBskpXWkAzF0Zi2riS-UxuVjqgAI1_IydbLi3PovPk/exec";
 
+        let currentUser = localStorage.getItem('babyTrackerCurrentUser') || '';
         let state = {
             children: [{ id: '1', name: 'Baby', birthdate: '', showNursing: true, showBottle: true, showDiaper: true, showSleep: true, activeSleepStart: null, lastConfettiTime: null }],
             selectedChildId: '1',
@@ -154,49 +180,104 @@
         let filterStartDate = '';
         let filterEndDate = '';
 
+        // Check login state on boot
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            if (currentUser) {
+                document.getElementById('loginScreen').classList.add('hidden');
+                loadData();
+            } else {
+                document.getElementById('loginScreen').classList.remove('hidden');
+            }
+        });
+
+        function handleLogin() {
+            const usernameInput = document.getElementById('loginUser').value.trim().toLowerCase();
+            if (!usernameInput) {
+                alert("Please enter a username.");
+                return;
+            }
+            currentUser = usernameInput;
+            localStorage.setItem('babyTrackerCurrentUser', currentUser);
+            document.getElementById('loginScreen').classList.add('hidden');
+            loadData();
+        }
+
+        function logout() {
+            localStorage.removeItem('babyTrackerCurrentUser');
+            currentUser = '';
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function getStorageKey() {
+            return `babyTrackerState_${currentUser || 'default'}`;
+        }
+
         async function loadData() {
             const statusDot = document.getElementById('syncStatus');
-            try {
-                const response = await fetch(SCRIPT_URL);
-                const cloudData = await response.json();
-                if (cloudData && cloudData.children && cloudData.logs) {
-                    state = cloudData;
-                    localStorage.setItem('babyTrackerState', JSON.stringify(state));
+            const storageKey = getStorageKey();
+            
+            // 1. Load immediately from localStorage partitioned by user
+            const local = localStorage.getItem(storageKey);
+            if (local) {
+                try { 
+                    state = JSON.parse(local); 
+                    render();
+                    checkBirthdayCelebration();
+                } catch(e) {
+                    console.error("Error parsing local storage", e);
                 }
+            }
+
+            // 2. Try fetching updates from cloud (appending user query param if script supports it)
+            try {
+                statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+                statusDot.title = "Syncing...";
+
+                const response = await fetch(`${SCRIPT_URL}?user=${encodeURIComponent(currentUser)}`);
+                const cloudData = await response.json();
+                
+                if (cloudData && cloudData.children && Array.isArray(cloudData.logs)) {
+                    state = cloudData;
+                    localStorage.setItem(storageKey, JSON.stringify(state));
+                    render();
+                    checkBirthdayCelebration();
+                }
+                
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
                 statusDot.title = "Synced with Google Sheet";
             } catch (err) {
                 statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
-                statusDot.title = "Offline / Local Mode";
-                const local = localStorage.getItem('babyTrackerState');
-                if (local) {
-                    try { state = JSON.parse(local); } catch(e) {}
-                }
+                statusDot.title = "Offline Mode (Using Local Device Data)";
             }
-            render();
-            checkBirthdayCelebration();
         }
 
         async function saveData() {
             const statusDot = document.getElementById('syncStatus');
+            const storageKey = getStorageKey();
+            
             statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-            statusDot.title = "Syncing...";
+            statusDot.title = "Saving...";
 
-            localStorage.setItem('babyTrackerState', JSON.stringify(state));
+            // 1. Save immediately to browser storage under specific user key
+            localStorage.setItem(storageKey, JSON.stringify(state));
             render();
 
+            // 2. Try syncing to Google Sheet in background with user tag
             try {
+                const payload = { user: currentUser, data: state };
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(state)
+                    body: JSON.stringify(payload)
                 });
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
                 statusDot.title = "Synced with Google Sheet";
             } catch (err) {
-                statusDot.className = "w-2 h-2 rounded-full bg-red-500";
-                statusDot.title = "Sync Failed (Saved Locally)";
+                statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
+                statusDot.title = "Saved Locally (Cloud Sync Failed)";
             }
         }
 
@@ -535,7 +616,7 @@
             lucide.createIcons();
         }
 
-        // --- Weekly Sleep Calendar View (Single Continuous Block Render) ---
+        // --- Weekly Sleep Calendar View ---
         function openSleepCalendarModal() {
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -569,10 +650,9 @@
             });
             headerHtml += `</div>`;
 
-            const HOUR_HEIGHT = 36; // height per hour row in pixels
-            const TOTAL_HEIGHT = HOUR_HEIGHT * 24; // 864px total height for 24 hours
+            const HOUR_HEIGHT = 36;
+            const TOTAL_HEIGHT = HOUR_HEIGHT * 24;
 
-            // Build time labels column
             let timeLabelsHtml = `<div class="w-16 shrink-0 flex flex-col border-r border-gray-200 bg-gray-50/50">`;
             for(let hour = 0; hour < 24; hour++) {
                 const hourLabel = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
@@ -580,14 +660,12 @@
             }
             timeLabelsHtml += `</div>`;
 
-            // Background horizontal grid lines
             let gridLinesHtml = `<div class="absolute inset-0 pointer-events-none flex flex-col">`;
             for(let hour = 0; hour < 24; hour++) {
                 gridLinesHtml += `<div class="border-b border-gray-100 w-full" style="height: ${HOUR_HEIGHT}px;"></div>`;
             }
             gridLinesHtml += `</div>`;
 
-            // Build day columns
             let columnsHtml = `<div class="grid grid-cols-7 flex-1 relative bg-white">`;
 
             weekDays.forEach(day => {
@@ -940,7 +1018,7 @@
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `baby_tracker_backup_${new Date().toISOString().slice(0,10)}.json`);
+            downloadAnchor.setAttribute("download", `baby_tracker_${currentUser}_${new Date().toISOString().slice(0,10)}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
@@ -956,7 +1034,7 @@
                     if (importedState && importedState.children && importedState.logs) {
                         state = importedState;
                         saveData();
-                        alert("Data successfully imported and synced!");
+                        alert("Data successfully imported!");
                         closeModal();
                     } else {
                         alert("Invalid backup file format.");
@@ -975,7 +1053,7 @@
             const body = document.getElementById('modalBody');
             modal.classList.remove('hidden');
             modalBox.className = "bg-[#f2f2f7] w-full max-w-md mx-auto rounded-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl";
-            title.innerText = "Settings & Profiles";
+            title.innerText = `Settings (${currentUser})`;
 
             let childrenHtml = '';
             state.children.forEach(c => {
@@ -1003,7 +1081,7 @@
                     <button onclick="addChildProfile()" class="w-full bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-sm">+ Add Child Profile</button>
                     
                     <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100 mt-4">
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Cloud & Local Backup</h4>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Backup & Export (${currentUser})</h4>
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="exportData()" class="bg-gray-100 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 transition">Export JSON</button>
                             <label class="bg-gray-100 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 transition text-center cursor-pointer flex items-center justify-center">
@@ -1056,8 +1134,6 @@
         function closeModal() {
             document.getElementById('appModal').classList.add('hidden');
         }
-
-        loadData();
     </script>
 </body>
 </html>
