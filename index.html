@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <!-- Child Selection Overlay (Appears immediately after login if children exist) -->
+    <!-- Child Selection Overlay -->
     <div id="childSelectScreen" class="fixed inset-0 bg-[#f2f2f7] z-40 flex items-center justify-center p-4 hidden">
         <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl border border-gray-100 space-y-5 text-center">
             <div class="w-14 h-14 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
@@ -70,6 +70,7 @@
             <span id="syncStatus" class="w-2 h-2 rounded-full bg-amber-400" title="Syncing..."></span>
         </div>
         <div class="flex items-center gap-2">
+            <button onclick="forceSync()" class="text-xs font-semibold text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full active:scale-95 transition">Sync Now</button>
             <button onclick="logout()" class="text-xs font-semibold text-gray-500 bg-gray-200/60 px-3 py-1.5 rounded-full active:scale-95 transition">Logout</button>
             <button onclick="openSettings()" class="w-8 h-8 rounded-full bg-gray-200/60 flex items-center justify-center text-gray-700 active:scale-95 transition">
                 <i data-lucide="settings" class="w-4 h-4"></i>
@@ -82,7 +83,7 @@
         <!-- Child Profile Selector Tabs -->
         <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
 
-        <!-- Dashboard Card (Renamed from 24-Hour Summary) -->
+        <!-- Dashboard Card -->
         <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
@@ -91,13 +92,11 @@
                 </div>
             </div>
             <div class="grid grid-cols-3 gap-2 text-center">
-                <!-- Formula Card -->
                 <div onclick="openSummaryDetail('formula')" class="bg-blue-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer hover:bg-blue-100/60">
                     <i data-lucide="droplet" class="w-4 h-4 text-blue-500 mx-auto mb-1"></i>
                     <div id="summaryFormula" class="font-bold text-sm text-gray-800">0.0 oz</div>
                     <div class="text-[10px] text-gray-500 font-medium">Formula</div>
                 </div>
-                <!-- Sleep Card (Clickable to Calendar View) -->
                 <div onclick="openSleepCalendarModal()" class="bg-purple-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer hover:bg-purple-100/60 relative group">
                     <div class="absolute -top-1 -right-1 bg-purple-500 text-white rounded-full p-0.5 shadow-xs">
                         <i data-lucide="calendar" class="w-2.5 h-2.5"></i>
@@ -108,7 +107,6 @@
                         Sleep <i data-lucide="chevron-right" class="w-2.5 h-2.5"></i>
                     </div>
                 </div>
-                <!-- Diapers Card -->
                 <div onclick="openSummaryDetail('diaper')" class="bg-orange-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer hover:bg-orange-100/60">
                     <i data-lucide="layers" class="w-4 h-4 text-orange-400 mx-auto mb-1"></i>
                     <div id="summaryDiapers" class="font-bold text-sm text-gray-800">0W / 0D</div>
@@ -190,14 +188,14 @@
         let state = {
             children: [{ id: '1', name: 'Baby', birthdate: '', showNursing: true, showBottle: true, showDiaper: true, showSleep: true, activeSleepStart: null, lastConfettiTime: null }],
             selectedChildId: null,
-            logs: []
+            logs: [],
+            lastModified: 0
         };
 
         let filterType = 'all';
         let filterStartDate = '';
         let filterEndDate = '';
 
-        // Check login state on boot
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             if (currentUser) {
@@ -232,33 +230,55 @@
             return `babyTrackerState_${currentUser || 'default'}`;
         }
 
+        function mergeStates(local, cloud) {
+            if (!cloud) return local;
+            if (!local) return cloud;
+
+            // Merge log arrays by unique ID to prevent data loss across multi-device usage
+            const map = new Map();
+            if (local.logs) local.logs.forEach(l => map.set(l.id, l));
+            if (cloud.logs) cloud.logs.forEach(l => {
+                // If local has un-synced additions or cloud has newer, keep both safely
+                map.set(l.id, l);
+            });
+
+            return {
+                children: cloud.children || local.children,
+                selectedChildId: local.selectedChildId !== undefined ? local.selectedChildId : cloud.selectedChildId,
+                logs: Array.from(map.values()),
+                lastModified: Math.max(local.lastModified || 0, cloud.lastModified || 0)
+            };
+        }
+
         async function loadData(promptChildSelect = false) {
             const statusDot = document.getElementById('syncStatus');
             const storageKey = getStorageKey();
             
-            // 1. Load immediately from localStorage partitioned by user
-            const local = localStorage.getItem(storageKey);
-            if (local) {
-                try { 
-                    state = JSON.parse(local); 
-                    render();
-                    checkBirthdayCelebration();
-                    if (promptChildSelect) showChildSelectPrompt();
-                } catch(e) {
-                    console.error("Error parsing local storage", e);
-                }
+            // 1. Load immediately from local device storage
+            const localRaw = localStorage.getItem(storageKey);
+            let localState = null;
+            if (localRaw) {
+                try { localState = JSON.parse(localRaw); } catch(e) {}
             }
 
-            // 2. Try fetching updates from cloud
+            if (localState) {
+                state = localState;
+                render();
+                checkBirthdayCelebration();
+                if (promptChildSelect) showChildSelectPrompt();
+            }
+
+            // 2. Fetch authoritative state from Google Cloud script backend
             try {
                 statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-                statusDot.title = "Syncing...";
+                statusDot.title = "Syncing with cloud...";
 
-                const response = await fetch(`${SCRIPT_URL}?user=${encodeURIComponent(currentUser)}`);
+                const response = await fetch(`${SCRIPT_URL}?user=${encodeURIComponent(currentUser)}`, { method: 'GET', cache: 'no-store' });
                 const cloudData = await response.json();
                 
-                if (cloudData && cloudData.children && Array.isArray(cloudData.logs)) {
-                    state = cloudData;
+                if (cloudData && Array.isArray(cloudData.logs)) {
+                    // Fail-safe merge ensures no logs get erased across device mismatches
+                    state = mergeStates(state, cloudData);
                     localStorage.setItem(storageKey, JSON.stringify(state));
                     render();
                     checkBirthdayCelebration();
@@ -272,6 +292,11 @@
                 statusDot.title = "Offline Mode (Using Local Device Data)";
                 if (promptChildSelect) showChildSelectPrompt();
             }
+        }
+
+        async function forceSync() {
+            await loadData(false);
+            await saveData();
         }
 
         function showChildSelectPrompt() {
@@ -306,15 +331,15 @@
             statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
             statusDot.title = "Saving...";
 
+            state.lastModified = Date.now();
             localStorage.setItem(storageKey, JSON.stringify(state));
             render();
 
             try {
                 const payload = { user: currentUser, data: state };
-                await fetch(SCRIPT_URL, {
+                const res = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight failures on Apps Script redirects
                     body: JSON.stringify(payload)
                 });
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
@@ -397,7 +422,7 @@
         }
 
         function filteredLogs() {
-            let logs = state.logs;
+            let logs = state.logs || [];
             if (state.selectedChildId) {
                 logs = logs.filter(l => l.childId === state.selectedChildId);
             }
@@ -416,7 +441,7 @@
         }
 
         function renderSummary() {
-            const logs = state.logs.filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
+            const logs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
             const weekCutoff = Date.now() - (7 * 86400000);
             const weekLogs = logs.filter(l => l.startTime >= weekCutoff);
             
@@ -612,8 +637,9 @@
         function quickDiaper(type) {
             const child = getActiveChild();
             if(!child) return;
+            if(!state.logs) state.logs = [];
             state.logs.push({
-                id: Date.now().toString(),
+                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
                 type: 'diaper',
                 diaperType: type,
                 startTime: Date.now(),
@@ -631,7 +657,7 @@
             modal.classList.remove('hidden');
             modalBox.className = "bg-[#f2f2f7] w-full max-w-md mx-auto rounded-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl";
 
-            const logs = state.logs.filter(l => (state.selectedChildId === null || l.childId === state.selectedChildId) && l.type === type && l.startTime >= Date.now() - 86400000);
+            const logs = (state.logs || []).filter(l => (state.selectedChildId === null || l.childId === state.selectedChildId) && l.type === type && l.startTime >= Date.now() - 86400000);
             
             if (type === 'formula') {
                 title.innerText = "24-Hour Formula Breakdown";
@@ -694,7 +720,7 @@
                 weekDays.push(d);
             }
 
-            const sleepLogs = state.logs.filter(l => (state.selectedChildId === null || l.childId === state.selectedChildId) && l.type === 'sleep');
+            const sleepLogs = (state.logs || []).filter(l => (state.selectedChildId === null || l.childId === state.selectedChildId) && l.type === 'sleep');
 
             let headerHtml = `<div class="grid grid-cols-8 border-b border-gray-200 pb-2 text-center font-bold text-xs text-gray-500 sticky top-0 bg-white z-20"><div>Time</div>`;
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -830,8 +856,9 @@
             clearInterval(window.nursingInterval);
             const durationMs = (window.nursingElapsed || 0) * 1000;
             const child = getActiveChild();
+            if(!state.logs) state.logs = [];
             state.logs.push({
-                id: Date.now().toString(),
+                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
                 type: 'nursing',
                 startTime: Date.now() - durationMs,
                 endTime: Date.now(),
@@ -885,8 +912,9 @@
             const child = getActiveChild();
             if(!child || !child.activeSleepStart) return;
 
+            if(!state.logs) state.logs = [];
             state.logs.push({
-                id: Date.now().toString(),
+                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
                 type: 'sleep',
                 startTime: child.activeSleepStart,
                 endTime: Date.now(),
@@ -948,8 +976,9 @@
 
         function saveManualData(type) {
             const child = getActiveChild();
+            if(!state.logs) state.logs = [];
             let newLog = {
-                id: Date.now().toString(),
+                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
                 type: type,
                 startTime: Date.now(),
                 childId: child.id,
@@ -964,7 +993,7 @@
         }
 
         function openEditModal(logId) {
-            const log = state.logs.find(l => l.id === logId);
+            const log = (state.logs || []).find(l => l.id === logId);
             if(!log) return;
             const modal = document.getElementById('appModal');
             const modalBox = document.getElementById('modalBox');
@@ -1037,7 +1066,7 @@
         }
 
         function updateLog(logId) {
-            const log = state.logs.find(l => l.id === logId);
+            const log = (state.logs || []).find(l => l.id === logId);
             if(!log) return;
 
             log.notes = document.getElementById('editNotes')?.value || '';
@@ -1064,7 +1093,7 @@
         }
 
         function deleteLog(logId) {
-            state.logs = state.logs.filter(l => l.id !== logId);
+            state.logs = (state.logs || []).filter(l => l.id !== logId);
             closeModal();
             saveData();
         }
@@ -1171,7 +1200,7 @@
             const name = prompt("Enter child name:", "Baby");
             if(name) {
                 state.children.push({
-                    id: Date.now().toString(),
+                    id: Date.now().toString() + Math.random().toString(36).substring(2,5),
                     name: name,
                     birthdate: '',
                     showNursing: true,
