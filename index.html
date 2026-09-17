@@ -8,6 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti for Birthdays -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
@@ -108,7 +110,7 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQXwiSr4NpYe4sV0gdrhiGmbBskpXWkAzF0Zi2riS-UxuVjqgAI1_IydbLi3PovPk/exec";
 
         let state = {
-            children: [{ id: '1', name: 'Baby', showNursing: true, showBottle: true, showDiaper: true, showSleep: true, activeSleepStart: null }],
+            children: [{ id: '1', name: 'Baby', birthdate: '', showNursing: true, showBottle: true, showDiaper: true, showSleep: true, activeSleepStart: null, lastConfettiTime: null }],
             selectedChildId: '1',
             logs: []
         };
@@ -135,6 +137,7 @@
                 }
             }
             render();
+            checkBirthdayCelebration();
         }
 
         async function saveData() {
@@ -197,6 +200,29 @@
         function selectChild(id) {
             state.selectedChildId = id;
             saveData();
+            checkBirthdayCelebration();
+        }
+
+        function checkBirthdayCelebration() {
+            const child = getActiveChild();
+            if (!child || !child.birthdate) return;
+
+            const today = new Date();
+            const [bYear, bMonth, bDay] = child.birthdate.split('-').map(Number);
+
+            if (today.getMonth() + 1 === bMonth && today.getDate() === bDay) {
+                const oneHour = 3600000;
+                if (!child.lastConfettiTime || (Date.now() - child.lastConfettiTime > oneHour)) {
+                    // Trigger Confetti Animation
+                    confetti({
+                        particleCount: 120,
+                        spread: 80,
+                        origin: { y: 0.3 }
+                    });
+                    child.lastConfettiTime = Date.now();
+                    saveData();
+                }
+            }
         }
 
         function getActiveChild() {
@@ -513,7 +539,7 @@
             saveData();
         }
 
-        // --- Edit / Delete Log Modal (Fully Editable Values) ---
+        // --- Edit / Delete Log Modal ---
         function openEditModal(logId) {
             const log = state.logs.find(l => l.id === logId);
             if(!log) return;
@@ -655,6 +681,10 @@
                 childrenHtml += `
                     <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100">
                         <input type="text" value="${c.name}" onchange="updateChildName('${c.id}', this.value)" class="w-full font-bold bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Birthdate</label>
+                            <input type="date" value="${c.birthdate || ''}" onchange="updateChildBirthdate('${c.id}', this.value)" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-medium text-gray-700">
+                        </div>
                         <div class="grid grid-cols-2 gap-2 text-xs font-medium text-gray-600 pt-1">
                             <label><input type="checkbox" ${c.showNursing ? 'checked' : ''} onchange="toggleChildFeature('${c.id}', 'showNursing', this.checked)"> Nursing</label>
                             <label><input type="checkbox" ${c.showBottle ? 'checked' : ''} onchange="toggleChildFeature('${c.id}', 'showBottle', this.checked)"> Bottle</label>
@@ -692,6 +722,11 @@
             if(c) { c.name = name; saveData(); }
         }
 
+        function updateChildBirthdate(id, birthdate) {
+            const c = state.children.find(ch => ch.id === id);
+            if(c) { c.birthdate = birthdate; saveData(); }
+        }
+
         function toggleChildFeature(id, feature, val) {
             const c = state.children.find(ch => ch.id === id);
             if(c) { c[feature] = val; saveData(); }
@@ -703,11 +738,13 @@
                 state.children.push({
                     id: Date.now().toString(),
                     name: name,
+                    birthdate: '',
                     showNursing: true,
                     showBottle: true,
                     showDiaper: true,
                     showSleep: true,
-                    activeSleepStart: null
+                    activeSleepStart: null,
+                    lastConfettiTime: null
                 });
                 saveData();
                 openSettings();
