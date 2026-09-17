@@ -178,6 +178,18 @@
             }
         }, 1000);
 
+        function formatDuration(ms) {
+            const totalMins = Math.round(ms / 60000);
+            const h = Math.floor(totalMins / 60);
+            const m = totalMins % 60;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
         function render() {
             lucide.createIcons();
             renderChildSelector();
@@ -213,7 +225,6 @@
             if (today.getMonth() + 1 === bMonth && today.getDate() === bDay) {
                 const oneHour = 3600000;
                 if (!child.lastConfettiTime || (Date.now() - child.lastConfettiTime > oneHour)) {
-                    // Trigger Confetti Animation
                     confetti({
                         particleCount: 120,
                         spread: 80,
@@ -318,11 +329,17 @@
             let html = '';
             logs.sort((a,b) => b.startTime - a.startTime).forEach(log => {
                 const childObj = state.children.find(c => c.id === log.childId);
-                const timeStr = new Date(log.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const timeStr = formatTime(log.startTime);
                 
                 let icon = 'droplet', color = 'bg-blue-500', detail = '';
-                if(log.type === 'nursing') { icon = 'heart'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'} (${Math.round(((log.endTime || log.startTime) - log.startTime)/60000)}m)`; }
-                if(log.type === 'sleep') { icon = 'moon'; color = 'bg-purple-500'; detail = log.endTime ? `${Math.round((log.endTime - log.startTime)/60000)} mins` : 'In Progress'; }
+                if(log.type === 'nursing') { icon = 'heart'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'} (${formatDuration(((log.endTime || log.startTime) - log.startTime))})`; }
+                if(log.type === 'sleep') { 
+                    icon = 'moon'; 
+                    color = 'bg-purple-500'; 
+                    const duration = log.endTime ? formatDuration(log.endTime - log.startTime) : 'In Progress';
+                    const timeRange = log.endTime ? `${formatTime(log.startTime)} – ${formatTime(log.endTime)}` : `${formatTime(log.startTime)} (Ongoing)`;
+                    detail = `${timeRange} • ${duration}`; 
+                }
                 if(log.type === 'bottle') { icon = 'droplet'; color = 'bg-blue-500'; detail = `${log.amount} oz`; }
                 if(log.type === 'diaper') { icon = 'layers'; color = 'bg-orange-400'; detail = `Type: ${log.diaperType}`; }
 
@@ -586,11 +603,16 @@
                     </div>
                 `;
             } else if (log.type === 'sleep') {
-                const sleepMins = log.endTime ? Math.round((log.endTime - log.startTime) / 60000) : 0;
+                const startIso = new Date(log.startTime - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                const endIso = log.endTime ? new Date(log.endTime - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
                 specificFieldsHtml = `
                     <div>
-                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Sleep Duration (Minutes)</label>
-                        <input id="editSleepDuration" type="number" step="1" value="${sleepMins}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Time</label>
+                        <input id="editSleepStart" type="datetime-local" value="${startIso}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">End Time</label>
+                        <input id="editSleepEnd" type="datetime-local" value="${endIso}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
                     </div>
                 `;
             }
@@ -621,8 +643,11 @@
                 const mins = parseFloat(document.getElementById('editNursingDuration').value) || 0;
                 log.endTime = log.startTime + (mins * 60000);
             } else if (log.type === 'sleep') {
-                const mins = parseFloat(document.getElementById('editSleepDuration').value) || 0;
-                log.endTime = log.startTime + (mins * 60000);
+                const startVal = document.getElementById('editSleepStart').value;
+                const endVal = document.getElementById('editSleepEnd').value;
+                if(startVal) log.startTime = new Date(startVal).getTime();
+                if(endVal) log.endTime = new Date(endVal).getTime();
+                else log.endTime = null;
             }
 
             closeModal();
