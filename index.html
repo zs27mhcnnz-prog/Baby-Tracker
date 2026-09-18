@@ -26,7 +26,7 @@
             </div>
             <div>
                 <h2 class="text-xl font-bold text-gray-900">Welcome Back</h2>
-                <p class="text-xs text-gray-500 mt-1">Enter your username to access your Google Sheets tracker.</p>
+                <p class="text-xs text-gray-500 mt-1">Enter your username to access your tracker.</p>
             </div>
             <div class="space-y-3 text-left">
                 <div>
@@ -40,82 +40,95 @@
         </div>
     </div>
 
-    <!-- Top Header -->
-    <header class="sticky top-0 z-30 bg-[#f2f2f7]/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-        <div class="flex items-center gap-2">
-            <h1 class="text-xl font-bold tracking-tight">Baby Tracker</h1>
-            <span id="syncStatus" class="w-2 h-2 rounded-full bg-amber-400" title="Syncing..."></span>
-        </div>
-        <div class="flex items-center gap-2">
-            <button onclick="openCalendarModal()" class="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-full active:scale-95 transition flex items-center gap-1">
-                <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Calendar
-            </button>
-            <button onclick="forceSync()" class="text-xs font-semibold text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full active:scale-95 transition">Sync</button>
-            <button onclick="openSettings()" class="w-8 h-8 rounded-full bg-gray-200/60 flex items-center justify-center text-gray-700 active:scale-95 transition">
-                <i data-lucide="settings" class="w-4 h-4"></i>
-            </button>
-        </div>
-    </header>
+    <!-- Main Container -->
+    <div id="appContainer" class="flex-1 flex flex-col hidden">
+        <!-- Top Header -->
+        <header class="sticky top-0 z-30 bg-[#f2f2f7]/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold tracking-tight">Baby Tracker</h1>
+                <span id="syncStatus" class="w-2 h-2 rounded-full bg-amber-400" title="Syncing..."></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openCalendarModal()" class="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-full active:scale-95 transition flex items-center gap-1">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Calendar
+                </button>
+                <button onclick="forceSync()" class="text-xs font-semibold text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full active:scale-95 transition">Sync</button>
+                <button onclick="openSettings()" class="w-8 h-8 rounded-full bg-gray-200/60 flex items-center justify-center text-gray-700 active:scale-95 transition">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                </button>
+                <button onclick="handleLogout()" class="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center active:scale-95 transition" title="Logout">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </header>
 
-    <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 space-y-4">
-        <!-- Child Selector -->
-        <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
+        <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 space-y-4">
+            <!-- Child Selector -->
+            <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
 
-        <!-- Selected Child Age/Gender Header Card -->
-        <div id="childMetaCard" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hidden">
-            <div class="flex items-center gap-3">
-                <div id="childMetaGenderBadge" class="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold">
-                    <i data-lucide="baby" class="w-5 h-5"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h2 id="childMetaName" class="text-base font-bold text-gray-900">Baby</h2>
-                        <span id="childMetaGenderTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">Unspecified</span>
+            <!-- Selected Child Meta Header Card -->
+            <div id="childMetaCard" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hidden">
+                <div class="flex items-center gap-3">
+                    <div id="childMetaGenderBadge" class="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold">
+                        <i data-lucide="baby" class="w-5 h-5"></i>
                     </div>
-                    <p id="childMetaAge" class="text-xs font-medium text-gray-500 mt-0.5">Age: Not set</p>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="childMetaName" class="text-base font-bold text-gray-900">Baby</h2>
+                            <span id="childMetaGenderTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">Unspecified</span>
+                        </div>
+                        <p id="childMetaAge" class="text-xs font-medium text-gray-500 mt-0.5">Age: Not set</p>
+                    </div>
+                </div>
+                <button onclick="openSettings()" class="text-xs text-rose-500 font-semibold hover:underline">Edit</button>
+            </div>
+
+            <!-- Summary Dashboard Card -->
+            <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>Dashboard (Past 24h)</span>
+                    </div>
+                </div>
+                <div id="summaryDashboardGrid" class="grid grid-cols-2 gap-2 text-center"></div>
+            </div>
+
+            <!-- Action Grid -->
+            <div id="actionGrid" class="grid grid-cols-2 gap-3"></div>
+
+            <!-- Instant Diaper Buttons -->
+            <div id="instantDiaperSection" class="space-y-1.5">
+                <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">Instant Diaper Log</span>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="quickDiaper('Wet')" class="bg-blue-50 text-blue-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
+                        <i data-lucide="droplet" class="w-3.5 h-3.5"></i> Wet
+                    </button>
+                    <button onclick="quickDiaper('Dirty')" class="bg-amber-50 text-amber-700 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
+                        <i data-lucide="circle" class="w-3.5 h-3.5"></i> Dirty
+                    </button>
+                    <button onclick="quickDiaper('Both')" class="bg-purple-50 text-purple-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Both
+                    </button>
                 </div>
             </div>
-            <button onclick="openSettings()" class="text-xs text-rose-500 font-semibold hover:underline">Edit</button>
-        </div>
 
-        <!-- Summary Dashboard Card -->
-        <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
-            <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
-                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                    <span>Dashboard (Past 24h)</span>
+            <!-- Logs Feed Header & Mass Delete Actions -->
+            <div class="space-y-2 pt-2">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="text-sm font-bold text-gray-800">Logs Feed</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="toggleSelectBtn" onclick="toggleMassSelectMode()" class="text-xs font-semibold text-gray-500 bg-gray-200/60 px-2.5 py-1 rounded-full">Select</button>
+                        <button id="selectAllBtn" onclick="toggleSelectAllLogs()" class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full hidden">Select All</button>
+                        <button id="deleteSelectedBtn" onclick="deleteSelectedLogs()" class="text-xs font-semibold text-white bg-rose-500 px-2.5 py-1 rounded-full hidden">Delete Selected</button>
+                    </div>
                 </div>
+                <div id="logsContainer" class="space-y-2"></div>
             </div>
-            <div id="summaryDashboardGrid" class="grid grid-cols-2 gap-2 text-center"></div>
-        </div>
+        </main>
+    </div>
 
-        <!-- Action Grid -->
-        <div id="actionGrid" class="grid grid-cols-2 gap-3"></div>
-
-        <!-- Instant Diaper Buttons -->
-        <div id="instantDiaperSection" class="space-y-1.5">
-            <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">Instant Diaper Log</span>
-            <div class="grid grid-cols-3 gap-2">
-                <button onclick="quickDiaper('Wet')" class="bg-blue-50 text-blue-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
-                    <i data-lucide="droplet" class="w-3.5 h-3.5"></i> Wet
-                </button>
-                <button onclick="quickDiaper('Dirty')" class="bg-amber-50 text-amber-700 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
-                    <i data-lucide="circle" class="w-3.5 h-3.5"></i> Dirty
-                </button>
-                <button onclick="quickDiaper('Both')" class="bg-purple-50 text-purple-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Both
-                </button>
-            </div>
-        </div>
-
-        <!-- Logs Feed -->
-        <div class="space-y-2 pt-2">
-            <h2 class="text-sm font-bold text-gray-800 px-1">Logs Feed</h2>
-            <div id="logsContainer" class="space-y-2"></div>
-        </div>
-    </main>
-
-    <!-- Generic Modal -->
+    <!-- Generic App Modal -->
     <div id="appModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
         <div id="modalBox" class="bg-[#f2f2f7] w-full max-w-md mx-auto rounded-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl">
             <div class="flex justify-between items-center border-b border-gray-200 pb-3">
@@ -136,12 +149,15 @@
             logs: []
         };
 
-        let currentCalView = 'day';
+        let isMassSelectMode = false;
+        let selectedLogIds = new Set();
+        let selectedCalDate = new Date();
 
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             if (currentUser) {
                 document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
                 loadData();
             }
         });
@@ -158,7 +174,17 @@
             currentUser = usernameInput;
             localStorage.setItem('babyTrackerCurrentUser', currentUser);
             document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
             loadData();
+        }
+
+        function handleLogout() {
+            if (confirm("Logout of tracker?")) {
+                localStorage.removeItem('babyTrackerCurrentUser');
+                currentUser = '';
+                document.getElementById('appContainer').classList.add('hidden');
+                document.getElementById('loginScreen').classList.remove('hidden');
+            }
         }
 
         function getStorageKey() { return `babyTrackerState_${currentUser || 'default'}`; }
@@ -313,7 +339,7 @@
             if (formula > 0) {
                 grid.className = "grid grid-cols-3 gap-2 text-center";
                 html += `
-                    <div onclick="openSummaryDetail('bottle')" class="bg-blue-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
+                    <div class="bg-blue-50/60 rounded-xl p-2.5">
                         <i data-lucide="droplet" class="w-4 h-4 text-blue-500 mx-auto mb-1"></i>
                         <div class="font-bold text-sm text-gray-800">${formula.toFixed(1)} oz</div>
                         <div class="text-[10px] text-gray-500 font-medium">Formula</div>
@@ -324,12 +350,12 @@
             }
 
             html += `
-                <div onclick="openSummaryDetail('sleep')" class="bg-purple-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
+                <div class="bg-purple-50/60 rounded-xl p-2.5">
                     <i data-lucide="moon" class="w-4 h-4 text-purple-500 mx-auto mb-1"></i>
                     <div class="font-bold text-sm text-gray-800">${(totalSleepMs / 3600000).toFixed(1)}h</div>
                     <div class="text-[10px] text-purple-600 font-semibold">Sleep Log</div>
                 </div>
-                <div onclick="openSummaryDetail('diaper')" class="bg-orange-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
+                <div class="bg-orange-50/60 rounded-xl p-2.5">
                     <i data-lucide="layers" class="w-4 h-4 text-orange-400 mx-auto mb-1"></i>
                     <div class="font-bold text-sm text-gray-800">${wet}W / ${dirty}D</div>
                     <div class="text-[10px] text-gray-500 font-medium">Diapers</div>
@@ -380,6 +406,42 @@
             grid.innerHTML = html;
         }
 
+        // --- Logs Feed & Mass Selection ---
+        function toggleMassSelectMode() {
+            isMassSelectMode = !isMassSelectMode;
+            selectedLogIds.clear();
+            document.getElementById('toggleSelectBtn').innerText = isMassSelectMode ? 'Cancel' : 'Select';
+            document.getElementById('selectAllBtn').classList.toggle('hidden', !isMassSelectMode);
+            document.getElementById('deleteSelectedBtn').classList.toggle('hidden', !isMassSelectMode);
+            renderLogs();
+        }
+
+        function toggleSelectAllLogs() {
+            const visibleLogs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
+            if (selectedLogIds.size === visibleLogs.length) {
+                selectedLogIds.clear();
+            } else {
+                visibleLogs.forEach(l => selectedLogIds.add(l.id));
+            }
+            renderLogs();
+        }
+
+        function toggleLogSelection(id) {
+            if (selectedLogIds.has(id)) selectedLogIds.delete(id);
+            else selectedLogIds.add(id);
+            renderLogs();
+        }
+
+        function deleteSelectedLogs() {
+            if (selectedLogIds.size === 0) return alert("Select at least one log entry to delete.");
+            if (confirm(`Delete ${selectedLogIds.size} log item(s)?`)) {
+                state.logs = state.logs.filter(l => !selectedLogIds.has(l.id));
+                selectedLogIds.clear();
+                toggleMassSelectMode();
+                saveData();
+            }
+        }
+
         function renderLogs() {
             const container = document.getElementById('logsContainer');
             let logs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
@@ -400,25 +462,112 @@
                 if(log.type === 'bottle') { icon = 'droplet'; color = 'bg-blue-500'; detail = `${log.amount} oz`; }
                 if(log.type === 'diaper') { icon = 'layers'; color = 'bg-orange-400'; detail = `Type: ${log.diaperType}`; }
 
+                const isChecked = selectedLogIds.has(log.id);
+
                 html += `
-                    <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
+                    <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            ${isMassSelectMode ? `<input type="checkbox" ${isChecked ? 'checked' : ''} onclick="toggleLogSelection('${log.id}')" class="w-4 h-4 accent-rose-500 rounded">` : ''}
                             <div class="w-9 h-9 rounded-full ${color} text-white flex items-center justify-center shrink-0">
                                 <i data-lucide="${icon}" class="w-4 h-4"></i>
                             </div>
-                            <div>
+                            <div class="truncate">
                                 <div class="text-sm font-bold text-gray-800 capitalize">${log.type} ${childObj && state.selectedChildId === null ? '• ' + childObj.name : ''}</div>
-                                <div class="text-xs text-gray-500">${detail} ${log.notes ? '— ' + log.notes : ''}</div>
+                                <div class="text-xs text-gray-500 truncate">${detail} ${log.notes ? '— ' + log.notes : ''}</div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 shrink-0">
                             <span class="text-[11px] font-medium text-gray-400">${timeStr}</span>
-                            <button onclick="editLog('${log.id}')" class="text-gray-400 hover:text-gray-700 p-1"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                            ${!isMassSelectMode ? `<button onclick="editLog('${log.id}')" class="text-gray-400 hover:text-gray-700 p-1"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>` : ''}
                         </div>
                     </div>
                 `;
             });
             container.innerHTML = html;
+        }
+
+        // --- Visual Time-Block Daily Calendar View ---
+        function openCalendarModal() {
+            document.getElementById('modalTitle').innerText = "Daily Time Grid";
+            document.getElementById('appModal').classList.remove('hidden');
+            renderVisualCalendar();
+        }
+
+        function changeCalDate(offsetDays) {
+            selectedCalDate.setDate(selectedCalDate.getDate() + offsetDays);
+            renderVisualCalendar();
+        }
+
+        function renderVisualCalendar() {
+            const dateStr = selectedCalDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            
+            const startOfDay = new Date(selectedCalDate.getFullYear(), selectedCalDate.getMonth(), selectedCalDate.getDate(), 0, 0, 0).getTime();
+            const endOfDay = startOfDay + 86400000;
+
+            const dayLogs = (state.logs || []).filter(l => {
+                const matchChild = !state.selectedChildId || l.childId === state.selectedChildId;
+                return matchChild && l.startTime >= startOfDay && l.startTime < endOfDay;
+            });
+
+            let blocksHtml = '';
+
+            // Render 24 hour grid lines & event blocks
+            for (let hour = 0; hour < 24; hour++) {
+                const hourLabel = new Date(startOfDay + hour * 3600000).toLocaleTimeString([], { hour: 'numeric', hour12: true });
+                blocksHtml += `
+                    <div class="flex items-center h-12 border-b border-gray-100 text-[10px] text-gray-400 relative">
+                        <span class="w-12 shrink-0 font-medium">${hourLabel}</span>
+                        <div class="flex-1 h-full border-l border-gray-100"></div>
+                    </div>
+                `;
+            }
+
+            let eventsHtml = '';
+            dayLogs.forEach(l => {
+                const offsetMinutes = (l.startTime - startOfDay) / 60000;
+                const topPx = (offsetMinutes / 60) * 48; // 48px per hour
+
+                let durationMins = 30; // default block size for instant logs
+                if (l.endTime && l.endTime > l.startTime) {
+                    durationMins = Math.max(15, (l.endTime - l.startTime) / 60000);
+                }
+                const heightPx = Math.min(200, (durationMins / 60) * 48);
+
+                let badgeBg = 'bg-blue-100 text-blue-800 border-blue-300';
+                if (l.type === 'nursing') badgeBg = 'bg-rose-100 text-rose-800 border-rose-300';
+                if (l.type === 'sleep') badgeBg = 'bg-purple-100 text-purple-800 border-purple-300';
+                if (l.type === 'diaper') badgeBg = 'bg-amber-100 text-amber-800 border-amber-300';
+
+                const timeFormatted = new Date(l.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                eventsHtml += `
+                    <div style="top: ${topPx}px; height: ${heightPx}px;" class="absolute left-12 right-2 rounded-lg p-1.5 border text-xs font-semibold shadow-xs overflow-hidden ${badgeBg}">
+                        <div class="flex justify-between items-center text-[10px]">
+                            <span class="font-bold capitalize">${l.type}</span>
+                            <span>${timeFormatted}</span>
+                        </div>
+                        <div class="text-[10px] opacity-80 truncate">${l.amount ? l.amount + ' oz' : (l.diaperType || l.side || '')}</div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('modalBody').innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-gray-200">
+                        <button onclick="changeCalDate(-1)" class="p-1 rounded-lg hover:bg-gray-100"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                        <span class="text-xs font-bold text-gray-800">${dateStr}</span>
+                        <button onclick="changeCalDate(1)" class="p-1 rounded-lg hover:bg-gray-100"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+                    </div>
+
+                    <div class="relative max-h-96 overflow-y-auto bg-white rounded-xl border border-gray-200 p-2">
+                        ${blocksHtml}
+                        <div class="absolute inset-0 pointer-events-none">
+                            ${eventsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
         }
 
         // --- Log Editing Feature ---
@@ -495,63 +644,6 @@
             }
         }
 
-        // --- Calendar Day & Week View ---
-        function openCalendarModal() {
-            document.getElementById('modalTitle').innerText = "Events Calendar";
-            document.getElementById('appModal').classList.remove('hidden');
-            renderCalendarView();
-        }
-
-        function setCalView(view) {
-            currentCalView = view;
-            renderCalendarView();
-        }
-
-        function renderCalendarView() {
-            const logs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
-            const now = new Date();
-
-            let viewFiltered = [];
-            if (currentCalView === 'day') {
-                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-                viewFiltered = logs.filter(l => l.startTime >= startOfDay);
-            } else {
-                const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay())).setHours(0,0,0,0);
-                viewFiltered = logs.filter(l => l.startTime >= startOfWeek);
-            }
-
-            let html = `
-                <div class="space-y-3">
-                    <div class="flex justify-center bg-gray-200/60 p-1 rounded-xl gap-1">
-                        <button onclick="setCalView('day')" class="flex-1 py-1.5 text-xs font-bold rounded-lg ${currentCalView === 'day' ? 'bg-white shadow-xs text-gray-900' : 'text-gray-500'}">Day View</button>
-                        <button onclick="setCalView('week')" class="flex-1 py-1.5 text-xs font-bold rounded-lg ${currentCalView === 'week' ? 'bg-white shadow-xs text-gray-900' : 'text-gray-500'}">Week View</button>
-                    </div>
-                    <div class="space-y-2 max-h-80 overflow-y-auto">
-            `;
-
-            if (viewFiltered.length === 0) {
-                html += `<div class="text-center text-xs text-gray-400 py-6">No events for this period.</div>`;
-            } else {
-                viewFiltered.sort((a,b) => b.startTime - a.startTime).forEach(l => {
-                    const d = new Date(l.startTime);
-                    const dateStr = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-                    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    html += `
-                        <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-xs">
-                            <div>
-                                <div class="font-bold text-gray-800 capitalize">${l.type} - ${l.amount ? l.amount + ' oz' : (l.diaperType || '')}</div>
-                                <div class="text-gray-400">${dateStr}</div>
-                            </div>
-                            <span class="font-semibold text-gray-500">${timeStr}</span>
-                        </div>
-                    `;
-                });
-            }
-
-            html += `</div></div>`;
-            document.getElementById('modalBody').innerHTML = html;
-        }
-
         // --- Settings & Child State Handling ---
         function openSettings() {
             document.getElementById('modalTitle').innerText = `Settings (${currentUser})`;
@@ -585,12 +677,10 @@
                 <div class="space-y-3">
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Child Profiles</h4>
                     ${childrenHtml}
-                    <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100">
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Import Data</h4>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">CSV File Upload</label>
-                        <input type="file" accept=".csv" onchange="importCSVData(event)" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs">
-                    </div>
-                    <button onclick="closeModal()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl mt-4">Done</button>
+                    <button onclick="handleLogout()" class="w-full bg-rose-50 text-rose-600 font-bold py-3 rounded-xl mt-2 flex items-center justify-center gap-2">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Logout Account
+                    </button>
+                    <button onclick="closeModal()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl mt-2">Done</button>
                 </div>
             `;
             lucide.createIcons();
@@ -604,130 +694,7 @@
             }
         }
 
-        // --- CSV Import ---
-        function importCSVData(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    updateSyncProgress(20);
-    const reader = new FileReader();
-
-    reader.onload = async function(e) {
-        const text = e.target.result;
-        const rows = parseCSVToObjects(text);
-
-        if (rows.length === 0) {
-            alert("No valid rows found in the CSV file.");
-            updateSyncProgress(100);
-            return;
-        }
-
-        updateSyncProgress(50);
-
-        // Process rows into local application state
-        rows.forEach(row => {
-            const profileName = (row['Profile Name'] || 'Baby').trim();
-            let child = state.children.find(c => c.name.toLowerCase() === profileName.toLowerCase());
-
-            if (!child) {
-                child = {
-                    id: 'child_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                    name: profileName,
-                    gender: ((row['[Profile] Sex'] || '').toLowerCase().includes('female')) ? 'girl' : 'boy',
-                    birthdate: row['[Profile] Birth Date'] || '',
-                    showNursing: true, showBottle: true, showDiaper: true, showSleep: true
-                };
-                state.children.push(child);
-            }
-
-            let startTime = parseFloat(row['Start Date/time (Epoch)']);
-            if (isNaN(startTime) || !startTime) startTime = new Date(row['Start Date/time'] || Date.now()).getTime();
-
-            const rawType = (row['Type'] || '').trim();
-            const activityKey = row['_activityKey'] || ('csv_' + Date.now() + '_' + Math.random().toString(36).substring(2,7));
-
-            // Prevent duplicate entries
-            if (state.logs.some(l => l.id === activityKey)) return;
-
-            let log = { id: activityKey, childId: child.id, startTime: startTime, notes: row['Note'] || '' };
-
-            if (rawType === 'Breastfeed' || rawType === 'Nursing') {
-                log.type = 'nursing';
-                const leftSec = parseFloat(row['[Breastfeed] Left Duration (Seconds)']) || 0;
-                const rightSec = parseFloat(row['[Breastfeed] Right Duration (Seconds)']) || 0;
-                log.side = (leftSec > 0 && rightSec > 0) ? 'Both' : (rightSec > 0 ? 'Right' : 'Left');
-                if (leftSec + rightSec > 0) log.endTime = startTime + ((leftSec + rightSec) * 1000);
-            } else if (rawType === 'Sleep') {
-                log.type = 'sleep';
-                let endEpoch = parseFloat(row['[Sleep] End Date/time (Epoch)']);
-                if (!isNaN(endEpoch) && endEpoch > 0) log.endTime = endEpoch;
-                else if (row['[Sleep] Duration (Seconds)']) log.endTime = startTime + (parseFloat(row['[Sleep] Duration (Seconds)']) * 1000);
-            } else if (rawType === 'Diaper') {
-                log.type = 'diaper';
-                const rawDiaper = (row['[Diaper] Type'] || '').trim();
-                log.diaperType = (rawDiaper.includes('Dirty') && rawDiaper.includes('Wet')) ? 'Both' : (rawDiaper.includes('Dirty') ? 'Dirty' : 'Wet');
-            } else if (rawType === 'Bottle' || rawType === 'Formula') {
-                log.type = 'bottle';
-                log.amount = parseFloat(row['Amount']) || 0;
-            }
-
-            if (log.type) state.logs.push(log);
-        });
-
-        updateSyncProgress(80);
-
-        // Sync with Google Sheets backend
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ user: currentUser, action: 'importCsv', rows: rows })
-            });
-        } catch (err) {}
-
-        saveData();
-        updateSyncProgress(100);
-        alert(`Successfully imported CSV data (${rows.length} rows processed).`);
-        closeModal();
-    };
-
-    reader.readAsText(file);
-}
-
-// Robust CSV Parsing helper supporting quoted strings and commas inside notes
-function parseCSVToObjects(csvText) {
-    const lines = csvText.split(/\r\n|\n/);
-    if (lines.length < 2) return [];
-
-    const parseLine = (line) => {
-        const result = [];
-        let cur = '', inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const c = line[i];
-            if (c === '"') { inQuotes = !inQuotes; }
-            else if (c === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
-            else { cur += c; }
-        }
-        result.push(cur.trim());
-        return result;
-    };
-
-    const headers = parseLine(lines[0]);
-    const objects = [];
-
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const values = parseLine(lines[i]);
-        const obj = {};
-        headers.forEach((h, index) => {
-            obj[h] = values[index] !== undefined ? values[index] : '';
-        });
-        objects.push(obj);
-    }
-    return objects;
-}
-
-        // Action timer functions...
+        // --- Action Timer Functions ---
         function openManualModal(type) {
             const modal = document.getElementById('appModal');
             document.getElementById('modalTitle').innerText = `Log ${type.toUpperCase()}`;
@@ -801,785 +768,6 @@ function parseCSVToObjects(csvText) {
             }
             closeModal();
             saveData();
-        }
-
-        function closeModal() { document.getElementById('appModal').classList.add('hidden'); }
-    </script>
-</body>
-</html>            <div class="space-y-3 text-left">
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Username / ID</label>
-                    <input id="loginUser" type="text" placeholder="e.g. Eric" class="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold text-gray-800">
-                </div>
-            </div>
-            <button onclick="handleLogin()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl shadow-sm transition active:scale-95 text-sm">
-                Unlock Tracker
-            </button>
-        </div>
-    </div>
-
-    <!-- Top Header -->
-    <header class="sticky top-0 z-30 bg-[#f2f2f7]/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-        <div class="flex items-center gap-2">
-            <h1 class="text-xl font-bold tracking-tight">Baby Tracker</h1>
-            <span id="syncStatus" class="w-2 h-2 rounded-full bg-amber-400" title="Syncing..."></span>
-        </div>
-        <div class="flex items-center gap-2">
-            <button onclick="forceSync()" class="text-xs font-semibold text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full active:scale-95 transition">Sync Now</button>
-            <button onclick="logout()" class="text-xs font-semibold text-gray-500 bg-gray-200/60 px-3 py-1.5 rounded-full active:scale-95 transition">Logout</button>
-            <button onclick="openSettings()" class="w-8 h-8 rounded-full bg-gray-200/60 flex items-center justify-center text-gray-700 active:scale-95 transition">
-                <i data-lucide="settings" class="w-4 h-4"></i>
-            </button>
-        </div>
-    </header>
-
-    <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 space-y-4">
-        <!-- Child Selector -->
-        <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
-
-        <!-- Selected Child Age/Gender Header Card -->
-        <div id="childMetaCard" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hidden">
-            <div class="flex items-center gap-3">
-                <div id="childMetaGenderBadge" class="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold">
-                    <i data-lucide="baby" class="w-5 h-5"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h2 id="childMetaName" class="text-base font-bold text-gray-900">Baby</h2>
-                        <span id="childMetaGenderTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">Unspecified</span>
-                    </div>
-                    <p id="childMetaAge" class="text-xs font-medium text-gray-500 mt-0.5">Age: Not set</p>
-                </div>
-            </div>
-            <button onclick="openSettings()" class="text-xs text-rose-500 font-semibold hover:underline">Edit</button>
-        </div>
-
-        <!-- Summary Dashboard Card -->
-        <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
-            <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
-                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                    <span>Dashboard (Past 24h)</span>
-                </div>
-            </div>
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div onclick="openSummaryDetail('bottle')" class="bg-blue-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
-                    <i data-lucide="droplet" class="w-4 h-4 text-blue-500 mx-auto mb-1"></i>
-                    <div id="summaryFormula" class="font-bold text-sm text-gray-800">0.0 oz</div>
-                    <div class="text-[10px] text-gray-500 font-medium">Formula</div>
-                </div>
-                <div onclick="openSleepCalendarModal()" class="bg-purple-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
-                    <i data-lucide="moon" class="w-4 h-4 text-purple-500 mx-auto mb-1"></i>
-                    <div id="summarySleep" class="font-bold text-sm text-gray-800">0.0h</div>
-                    <div class="text-[10px] text-purple-600 font-semibold">Sleep Log</div>
-                </div>
-                <div onclick="openSummaryDetail('diaper')" class="bg-orange-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
-                    <i data-lucide="layers" class="w-4 h-4 text-orange-400 mx-auto mb-1"></i>
-                    <div id="summaryDiapers" class="font-bold text-sm text-gray-800">0W / 0D</div>
-                    <div class="text-[10px] text-gray-500 font-medium">Diapers</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Action Grid -->
-        <div id="actionGrid" class="grid grid-cols-2 gap-3"></div>
-
-        <!-- Instant Diaper Buttons -->
-        <div id="instantDiaperSection" class="space-y-1.5">
-            <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">Instant Diaper Log</span>
-            <div class="grid grid-cols-3 gap-2">
-                <button onclick="quickDiaper('Wet')" class="bg-blue-50 text-blue-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-xs">
-                    <i data-lucide="droplet" class="w-3.5 h-3.5"></i> Wet
-                </button>
-                <button onclick="quickDiaper('Dirty')" class="bg-amber-50 text-amber-700 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-xs">
-                    <i data-lucide="circle" class="w-3.5 h-3.5"></i> Dirty
-                </button>
-                <button onclick="quickDiaper('Both')" class="bg-purple-50 text-purple-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-xs">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Both
-                </button>
-            </div>
-        </div>
-
-        <!-- Logs Feed -->
-        <div class="space-y-2 pt-2">
-            <div class="flex justify-between items-center px-1">
-                <h2 class="text-sm font-bold text-gray-800">Logs Feed</h2>
-            </div>
-            <div id="logsContainer" class="space-y-2"></div>
-        </div>
-    </main>
-
-    <!-- Generic Modal -->
-    <div id="appModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 transition-opacity">
-        <div id="modalBox" class="bg-[#f2f2f7] w-full max-w-md mx-auto rounded-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl">
-            <div class="flex justify-between items-center border-b border-gray-200 pb-3">
-                <h3 id="modalTitle" class="font-bold text-lg text-gray-900">Log Entry</h3>
-                <button onclick="closeModal()" class="text-gray-400 font-semibold text-sm">Cancel</button>
-            </div>
-            <div id="modalBody" class="space-y-4"></div>
-        </div>
-    </div>
-
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQXwiSr4NpYe4sV0gdrhiGmbBskpXWkAzF0Zi2riS-UxuVjqgAI1_IydbLi3PovPk/exec";
-
-        let currentUser = localStorage.getItem('babyTrackerCurrentUser') || '';
-        let state = {
-            children: [{ id: '1', name: 'Baby', gender: 'unspecified', birthdate: '', showNursing: true, showBottle: true, showDiaper: true, showSleep: true, activeSleepStart: null, lastConfettiTime: null }],
-            selectedChildId: null,
-            logs: [],
-            lastModified: 0
-        };
-
-        window.nursingElapsed = 0;
-        window.nursingRunning = false;
-        window.nursingInterval = null;
-
-        window.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            if (currentUser) {
-                document.getElementById('loginScreen').classList.add('hidden');
-                loadData();
-            } else {
-                document.getElementById('loginScreen').classList.remove('hidden');
-            }
-        });
-
-        function handleLogin() {
-            const usernameInput = document.getElementById('loginUser').value.trim().toLowerCase();
-            if (!usernameInput) return alert("Please enter a username.");
-            currentUser = usernameInput;
-            localStorage.setItem('babyTrackerCurrentUser', currentUser);
-            document.getElementById('loginScreen').classList.add('hidden');
-            loadData();
-        }
-
-        function logout() {
-            localStorage.removeItem('babyTrackerCurrentUser');
-            currentUser = '';
-            document.getElementById('loginUser').value = '';
-            document.getElementById('loginScreen').classList.remove('hidden');
-        }
-
-        function getStorageKey() {
-            return `babyTrackerState_${currentUser || 'default'}`;
-        }
-
-        async function loadData() {
-            const statusDot = document.getElementById('syncStatus');
-            const localRaw = localStorage.getItem(getStorageKey());
-            if (localRaw) {
-                try { state = JSON.parse(localRaw); } catch(e) {}
-                render();
-            }
-
-            try {
-                statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-                const response = await fetch(`${SCRIPT_URL}?user=${encodeURIComponent(currentUser)}`, { method: 'GET', cache: 'no-store' });
-                const cloudData = await response.json();
-                
-                if (cloudData && Array.isArray(cloudData.logs)) {
-                    state = cloudData;
-                    localStorage.setItem(getStorageKey(), JSON.stringify(state));
-                    render();
-                }
-                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-            } catch (err) {
-                statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
-            }
-        }
-
-        async function saveData() {
-            const statusDot = document.getElementById('syncStatus');
-            statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-            localStorage.setItem(getStorageKey(), JSON.stringify(state));
-            render();
-
-            try {
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ user: currentUser, data: state })
-                });
-                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-            } catch (err) {
-                statusDot.className = "w-2 h-2 rounded-full bg-amber-400";
-            }
-        }
-
-        async function forceSync() { await loadData(); await saveData(); }
-
-        function calculateExactAge(birthdateStr) {
-            if (!birthdateStr) return "Birthdate not set";
-            const birthDate = new Date(birthdateStr + 'T00:00:00');
-            const today = new Date();
-
-            if (isNaN(birthDate.getTime())) return "Invalid date";
-
-            let years = today.getFullYear() - birthDate.getFullYear();
-            let months = today.getMonth() - birthDate.getMonth();
-            let days = today.getDate() - birthDate.getDate();
-
-            if (days < 0) {
-                months--;
-                const prevMonthLastDay = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
-                days += prevMonthLastDay;
-            }
-
-            if (months < 0) {
-                years--;
-                months += 12;
-            }
-
-            const parts = [];
-            if (years > 0) parts.push(`${years} ${years === 1 ? 'yr' : 'yrs'}`);
-            if (months > 0 || years > 0) parts.push(`${months} ${months === 1 ? 'mo' : 'mos'}`);
-            parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
-
-            return parts.join(', ');
-        }
-
-        function render() {
-            renderChildSelector();
-            renderChildMetaCard();
-            renderSummary();
-            renderActionGrid();
-            renderLogs();
-            lucide.createIcons();
-        }
-
-        function renderChildSelector() {
-            const container = document.getElementById('childSelector');
-            let html = `<button onclick="selectChild(null)" class="px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${state.selectedChildId === null ? 'bg-rose-500 text-white' : 'bg-white text-gray-700 shadow-xs'}">All Children</button>`;
-            
-            (state.children || []).forEach(child => {
-                const isSelected = state.selectedChildId === child.id;
-                html += `<button onclick="selectChild('${child.id}')" class="px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${isSelected ? 'bg-rose-500 text-white' : 'bg-white text-gray-700 shadow-xs'}">${child.name}</button>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function selectChild(id) {
-            state.selectedChildId = id;
-            saveData();
-        }
-
-        function getActiveChild() {
-            return state.children.find(c => c.id === state.selectedChildId) || state.children[0];
-        }
-
-        function renderChildMetaCard() {
-            const container = document.getElementById('childMetaCard');
-            if (state.selectedChildId === null || !state.children.length) {
-                container.classList.add('hidden');
-                return;
-            }
-
-            container.classList.remove('hidden');
-            const child = getActiveChild();
-
-            document.getElementById('childMetaName').innerText = child.name || 'Baby';
-            document.getElementById('childMetaAge').innerText = `Age: ${calculateExactAge(child.birthdate)}`;
-
-            const badge = document.getElementById('childMetaGenderBadge');
-            const tag = document.getElementById('childMetaGenderTag');
-            const gender = (child.gender || 'unspecified').toLowerCase();
-
-            if (gender === 'boy') {
-                badge.className = "w-10 h-10 rounded-full flex items-center justify-center bg-blue-100 text-blue-600 font-bold";
-                tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 uppercase";
-                tag.innerText = "Boy";
-            } else if (gender === 'girl') {
-                badge.className = "w-10 h-10 rounded-full flex items-center justify-center bg-pink-100 text-pink-600 font-bold";
-                tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 uppercase";
-                tag.innerText = "Girl";
-            } else {
-                badge.className = "w-10 h-10 rounded-full flex items-center justify-center bg-purple-100 text-purple-600 font-bold";
-                tag.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase";
-                tag.innerText = "Unspecified";
-            }
-        }
-
-        function renderSummary() {
-            const logs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
-            const summaryContainer = document.getElementById('summaryCardContainer');
-            if (logs.length === 0) return summaryContainer.classList.add('hidden');
-            summaryContainer.classList.remove('hidden');
-
-            const dayCutoff = Date.now() - 86400000;
-            const recent = logs.filter(l => l.startTime >= dayCutoff);
-
-            const formula = recent.filter(l => l.type === 'bottle').reduce((acc, l) => acc + (l.amount || 0), 0);
-            const wet = recent.filter(l => l.type === 'diaper' && (l.diaperType === 'Wet' || l.diaperType === 'Both')).length;
-            const dirty = recent.filter(l => l.type === 'diaper' && (l.diaperType === 'Dirty' || l.diaperType === 'Both')).length;
-            
-            let totalSleepMs = 0;
-            recent.filter(l => l.type === 'sleep').forEach(l => {
-                const lStart = l.startTime;
-                const lEnd = l.endTime || Date.now();
-                const effectiveStart = Math.max(lStart, dayCutoff);
-                const effectiveEnd = Math.min(lEnd, Date.now());
-                if (effectiveEnd > effectiveStart) totalSleepMs += (effectiveEnd - effectiveStart);
-            });
-
-            document.getElementById('summaryFormula').innerText = formula.toFixed(1) + ' oz';
-            document.getElementById('summarySleep').innerText = (totalSleepMs / 3600000).toFixed(1) + 'h';
-            document.getElementById('summaryDiapers').innerText = `${wet}W / ${dirty}D`;
-        }
-
-        function renderActionGrid() {
-            const child = getActiveChild();
-            const grid = document.getElementById('actionGrid');
-            if(!child) return;
-
-            let html = '';
-            if(child.showNursing) {
-                html += `
-                    <button onclick="openNursingTimer()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center"><i data-lucide="timer" class="w-5 h-5"></i></div>
-                        <span class="text-xs font-bold text-gray-800">Nursing Timer</span>
-                    </button>
-                `;
-            }
-            if(child.showSleep) {
-                const isSleeping = !!child.activeSleepStart;
-                html += `
-                    <button onclick="openSleepTimer()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full ${isSleeping ? 'bg-purple-500 text-white animate-pulse' : 'bg-purple-50 text-purple-500'} flex items-center justify-center"><i data-lucide="moon-star" class="w-5 h-5"></i></div>
-                        <span class="text-xs font-bold text-gray-800">${isSleeping ? 'Sleeping...' : 'Sleep Timer'}</span>
-                    </button>
-                `;
-            }
-            if(child.showBottle) {
-                html += `
-                    <button onclick="openManualModal('bottle')" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center"><i data-lucide="droplet" class="w-5 h-5"></i></div>
-                        <span class="text-xs font-bold text-gray-800">Bottle</span>
-                    </button>
-                `;
-            }
-            if(child.showDiaper) {
-                html += `
-                    <button onclick="openManualModal('diaper')" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-400 flex items-center justify-center"><i data-lucide="layers" class="w-5 h-5"></i></div>
-                        <span class="text-xs font-bold text-gray-800">Diaper</span>
-                    </button>
-                `;
-            }
-            grid.innerHTML = html;
-        }
-
-        function renderLogs() {
-            const container = document.getElementById('logsContainer');
-            let logs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
-
-            if (logs.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs bg-white rounded-2xl border border-gray-100">No logs found.</div>`;
-                return;
-            }
-
-            let html = '';
-            logs.sort((a,b) => b.startTime - a.startTime).forEach(log => {
-                const childObj = state.children.find(c => c.id === log.childId);
-                const timeStr = new Date(log.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date(log.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                let icon = 'droplet', color = 'bg-blue-500', detail = '';
-                if(log.type === 'nursing') { icon = 'heart'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'}`; }
-                if(log.type === 'sleep') { icon = 'moon'; color = 'bg-purple-500'; detail = log.endTime ? `${Math.round((log.endTime - log.startTime)/60000)} mins` : 'Ongoing'; }
-                if(log.type === 'bottle') { icon = 'droplet'; color = 'bg-blue-500'; detail = `${log.amount} oz`; }
-                if(log.type === 'diaper') { icon = 'layers'; color = 'bg-orange-400'; detail = `Type: ${log.diaperType}`; }
-
-                html += `
-                    <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full ${color} text-white flex items-center justify-center shrink-0">
-                                <i data-lucide="${icon}" class="w-4 h-4"></i>
-                            </div>
-                            <div>
-                                <div class="text-sm font-bold text-gray-800 capitalize">${log.type} ${childObj && state.selectedChildId === null ? '• ' + childObj.name : ''}</div>
-                                <div class="text-xs text-gray-500">${detail} ${log.notes ? '— ' + log.notes : ''}</div>
-                            </div>
-                        </div>
-                        <div class="text-[11px] font-medium text-gray-400 text-right">${timeStr}</div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        // --- Nursing Timer Controls ---
-        function openNursingTimer() {
-            const modal = document.getElementById('appModal');
-            document.getElementById('modalTitle').innerText = "Live Nursing Timer";
-            modal.classList.remove('hidden');
-
-            document.getElementById('modalBody').innerHTML = `
-                <div class="space-y-4 text-center">
-                    <select id="nursingSide" class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
-                        <option value="Left">Left Side</option>
-                        <option value="Right">Right Side</option>
-                        <option value="Both">Both Sides</option>
-                    </select>
-                    <div id="nursingDisplay" class="text-5xl font-mono font-bold text-rose-500 py-4">00:00</div>
-                    <div class="flex gap-2">
-                        <button id="nursingToggleBtn" onclick="toggleNursingTimer()" class="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl">Start</button>
-                        <button onclick="resetNursingTimer()" class="bg-gray-200 text-gray-700 font-bold px-4 py-3 rounded-xl">Reset</button>
-                    </div>
-                    <input id="nursingNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base">
-                    <button onclick="saveNursingTimer()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl shadow-sm">Save Entry</button>
-                </div>
-            `;
-
-            window.nursingElapsed = 0;
-            window.nursingRunning = false;
-            if (window.nursingInterval) clearInterval(window.nursingInterval);
-        }
-
-        function toggleNursingTimer() {
-            window.nursingRunning = !window.nursingRunning;
-            const btn = document.getElementById('nursingToggleBtn');
-            if (window.nursingRunning) {
-                btn.innerText = "Pause";
-                btn.className = "flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl";
-                window.nursingInterval = setInterval(() => {
-                    window.nursingElapsed++;
-                    const m = String(Math.floor(window.nursingElapsed / 60)).padStart(2, '0');
-                    const s = String(window.nursingElapsed % 60).padStart(2, '0');
-                    const display = document.getElementById('nursingDisplay');
-                    if (display) display.innerText = `${m}:${s}`;
-                }, 1000);
-            } else {
-                btn.innerText = "Start";
-                btn.className = "flex-1 bg-rose-500 text-white font-bold py-3 rounded-xl";
-                clearInterval(window.nursingInterval);
-            }
-        }
-
-        function resetNursingTimer() {
-            window.nursingElapsed = 0;
-            window.nursingRunning = false;
-            clearInterval(window.nursingInterval);
-            const display = document.getElementById('nursingDisplay');
-            if (display) display.innerText = "00:00";
-            const btn = document.getElementById('nursingToggleBtn');
-            if (btn) {
-                btn.innerText = "Start";
-                btn.className = "flex-1 bg-rose-500 text-white font-bold py-3 rounded-xl";
-            }
-        }
-
-        function saveNursingTimer() {
-            clearInterval(window.nursingInterval);
-            const durationMs = (window.nursingElapsed || 0) * 1000;
-            const child = getActiveChild();
-            state.logs.push({
-                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
-                type: 'nursing',
-                startTime: Date.now() - durationMs,
-                endTime: Date.now(),
-                side: document.getElementById('nursingSide').value,
-                notes: document.getElementById('nursingNotes').value,
-                childId: child.id
-            });
-            closeModal();
-            saveData();
-        }
-
-        // --- Sleep Timer & Tracker ---
-        function openSleepTimer() {
-            const child = getActiveChild();
-            const modal = document.getElementById('appModal');
-            document.getElementById('modalTitle').innerText = "Sleep Tracker";
-            modal.classList.remove('hidden');
-
-            const isSleeping = !!child.activeSleepStart;
-
-            document.getElementById('modalBody').innerHTML = `
-                <div class="space-y-4 text-center">
-                    <div class="text-sm text-gray-500 font-medium">Status: <span class="font-bold ${isSleeping ? 'text-purple-600' : 'text-gray-800'}">${isSleeping ? 'Currently Sleeping' : 'Awake'}</span></div>
-                    ${isSleeping ? `
-                        <button onclick="stopSleepTimer()" class="w-full bg-purple-600 text-white font-bold py-4 rounded-xl text-base shadow-sm">Wake Up (Stop Sleep)</button>
-                    ` : `
-                        <button onclick="startSleepTimer()" class="w-full bg-purple-500 text-white font-bold py-4 rounded-xl text-base shadow-sm">Start Sleep Session</button>
-                    `}
-                    <input id="sleepNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base">
-                </div>
-            `;
-        }
-
-        function startSleepTimer() {
-            const child = getActiveChild();
-            child.activeSleepStart = Date.now();
-            closeModal();
-            saveData();
-        }
-
-        function stopSleepTimer() {
-            const child = getActiveChild();
-            if (!child.activeSleepStart) return;
-            const notes = document.getElementById('sleepNotes').value;
-            
-            state.logs.push({
-                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
-                type: 'sleep',
-                startTime: child.activeSleepStart,
-                endTime: Date.now(),
-                notes: notes,
-                childId: child.id
-            });
-
-            child.activeSleepStart = null;
-            closeModal();
-            saveData();
-        }
-
-        // --- Manual Log Modal ---
-        function openManualModal(type) {
-            const modal = document.getElementById('appModal');
-            document.getElementById('modalTitle').innerText = `Log ${type.toUpperCase()}`;
-            modal.classList.remove('hidden');
-
-            let bodyHtml = '';
-            if (type === 'bottle') {
-                bodyHtml = `
-                    <div class="space-y-3">
-                        <label class="block text-xs font-bold text-gray-400 uppercase">Amount (oz)</label>
-                        <input id="manualAmount" type="number" step="0.5" value="4.0" class="w-full bg-white border border-gray-200 rounded-xl p-3 text-lg font-bold text-gray-800">
-                        <input id="manualNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm">
-                        <button onclick="saveManualEntry('bottle')" class="w-full bg-blue-500 text-white font-bold py-3 rounded-xl">Save Bottle Log</button>
-                    </div>
-                `;
-            } else if (type === 'diaper') {
-                bodyHtml = `
-                    <div class="space-y-3">
-                        <label class="block text-xs font-bold text-gray-400 uppercase">Diaper Type</label>
-                        <select id="manualDiaperType" class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
-                            <option value="Wet">Wet</option>
-                            <option value="Dirty">Dirty</option>
-                            <option value="Both">Both</option>
-                        </select>
-                        <input id="manualNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm">
-                        <button onclick="saveManualEntry('diaper')" class="w-full bg-orange-400 text-white font-bold py-3 rounded-xl">Save Diaper Log</button>
-                    </div>
-                `;
-            }
-            document.getElementById('modalBody').innerHTML = bodyHtml;
-        }
-
-        function saveManualEntry(type) {
-            const child = getActiveChild();
-            const notes = document.getElementById('manualNotes').value;
-            const log = {
-                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
-                type: type,
-                startTime: Date.now(),
-                childId: child.id,
-                notes: notes
-            };
-
-            if (type === 'bottle') {
-                log.amount = parseFloat(document.getElementById('manualAmount').value) || 0;
-            } else if (type === 'diaper') {
-                log.diaperType = document.getElementById('manualDiaperType').value;
-            }
-
-            state.logs.push(log);
-            closeModal();
-            saveData();
-        }
-
-        function quickDiaper(type) {
-            const child = getActiveChild();
-            state.logs.push({
-                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
-                type: 'diaper',
-                diaperType: type,
-                startTime: Date.now(),
-                childId: child.id,
-                notes: 'Quick Log'
-            });
-            saveData();
-        }
-
-        function openSummaryDetail(filterType) {
-            const logs = (state.logs || []).filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === filterType);
-            document.getElementById('modalTitle').innerText = `${filterType.toUpperCase()} History`;
-            document.getElementById('appModal').classList.remove('hidden');
-
-            let html = `<div class="space-y-2">`;
-            logs.sort((a,b) => b.startTime - a.startTime).slice(0, 15).forEach(l => {
-                const dateStr = new Date(l.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                const detail = l.type === 'bottle' ? `${l.amount} oz` : `Type: ${l.diaperType}`;
-                html += `
-                    <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-xs">
-                        <div>
-                            <span class="font-bold text-gray-800">${detail}</span>
-                            <div class="text-gray-400">${l.notes || 'No notes'}</div>
-                        </div>
-                        <div class="text-gray-400">${dateStr}</div>
-                    </div>
-                `;
-            });
-            html += `</div>`;
-            document.getElementById('modalBody').innerHTML = html;
-        }
-
-        function openSleepCalendarModal() {
-            const sleepLogs = (state.logs || []).filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === 'sleep');
-            document.getElementById('modalTitle').innerText = "Sleep Logs Calendar";
-            document.getElementById('appModal').classList.remove('hidden');
-
-            let html = `<div class="space-y-2">`;
-            sleepLogs.sort((a,b) => b.startTime - a.startTime).slice(0, 15).forEach(l => {
-                const dateStr = new Date(l.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                const duration = l.endTime ? `${Math.round((l.endTime - l.startTime) / 60000)} mins` : 'Ongoing';
-                html += `
-                    <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-xs">
-                        <div>
-                            <span class="font-bold text-purple-700">${duration}</span>
-                            <div class="text-gray-400">${l.notes || 'No notes'}</div>
-                        </div>
-                        <div class="text-gray-400">${dateStr}</div>
-                    </div>
-                `;
-            });
-            html += `</div>`;
-            document.getElementById('modalBody').innerHTML = html;
-        }
-
-        // --- Settings and Profile Synchronization ---
-        function openSettings() {
-            document.getElementById('modalTitle').innerText = `Settings (${currentUser})`;
-            document.getElementById('appModal').classList.remove('hidden');
-
-            let childrenHtml = '';
-            (state.children || []).forEach(c => {
-                childrenHtml += `
-                    <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100">
-                        <input type="text" value="${c.name}" onchange="updateChildProp('${c.id}', 'name', this.value)" class="w-full font-bold bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
-                        
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase">Gender</label>
-                                <select onchange="updateChildProp('${c.id}', 'gender', this.value)" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-semibold text-gray-700">
-                                    <option value="unspecified" ${c.gender === 'unspecified' ? 'selected' : ''}>Unspecified</option>
-                                    <option value="boy" ${c.gender === 'boy' ? 'selected' : ''}>Boy</option>
-                                    <option value="girl" ${c.gender === 'girl' ? 'selected' : ''}>Girl</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase">Birthdate</label>
-                                <input type="date" value="${c.birthdate || ''}" onchange="updateChildProp('${c.id}', 'birthdate', this.value)" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-medium text-gray-700">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2 text-xs font-medium text-gray-600 pt-1">
-                            <label><input type="checkbox" ${c.showNursing ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showNursing', this.checked)"> Nursing</label>
-                            <label><input type="checkbox" ${c.showBottle ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showBottle', this.checked)"> Bottle</label>
-                            <label><input type="checkbox" ${c.showDiaper ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showDiaper', this.checked)"> Diaper</label>
-                            <label><input type="checkbox" ${c.showSleep ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showSleep', this.checked)"> Sleep</label>
-                        </div>
-                    </div>
-                `;
-            });
-
-            document.getElementById('modalBody').innerHTML = `
-                <div class="space-y-3">
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Child Profiles</h4>
-                    ${childrenHtml}
-                    <button onclick="addChildProfile()" class="w-full bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-sm">+ Add Child Profile</button>
-                    
-                    <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100 mt-4">
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Data Import & Instructions</h4>
-                        <button onclick="openUploadInstructionsModal()" class="w-full bg-rose-50 text-rose-600 font-bold py-2.5 rounded-xl text-xs">
-                            <i data-lucide="upload" class="w-3.5 h-3.5 inline mr-1"></i> Upload Data & Instructions
-                        </button>
-                    </div>
-
-                    <button onclick="closeModal()" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl mt-4">Done</button>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function updateChildProp(id, prop, val) {
-            const c = state.children.find(ch => ch.id === id);
-            if (c) { 
-                c[prop] = val; 
-                saveData(); 
-            }
-        }
-
-        function addChildProfile() {
-            const name = prompt("Enter child name:", "Baby");
-            if(name) {
-                state.children.push({
-                    id: Date.now().toString() + Math.random().toString(36).substring(2,5),
-                    name: name,
-                    gender: 'unspecified',
-                    birthdate: '',
-                    showNursing: true,
-                    showBottle: true,
-                    showDiaper: true,
-                    showSleep: true,
-                    activeSleepStart: null,
-                    lastConfettiTime: null
-                });
-                saveData();
-                openSettings();
-            }
-        }
-
-        function openUploadInstructionsModal() {
-            document.getElementById('modalTitle').innerText = "Upload Data Instructions";
-            document.getElementById('modalBody').innerHTML = `
-                <div class="space-y-3 text-xs text-gray-600">
-                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-900 space-y-1">
-                        <div class="font-bold">Google Sheets Data Format</div>
-                        <p>Your Google Sheet is automatically structured into two tabs: <code class="bg-blue-100 px-1 rounded">Logs</code> and <code class="bg-blue-100 px-1 rounded">Profiles</code>.</p>
-                    </div>
-
-                    <div class="space-y-1">
-                        <div class="font-bold text-gray-800">1. Logs Sheet Columns</div>
-                        <p class="font-mono bg-gray-100 p-2 rounded text-[10px]">id, user, childId, type, startTime, endTime, amount, diaperType, side, notes, updatedAt</p>
-                    </div>
-
-                    <div class="space-y-1">
-                        <div class="font-bold text-gray-800">2. Profiles Sheet Columns</div>
-                        <p class="font-mono bg-gray-100 p-2 rounded text-[10px]">user, childId, name, birthdate, showNursing, showBottle, showDiaper, showSleep, activeSleepStart, lastConfettiTime, updatedAt</p>
-                    </div>
-
-                    <div class="border-t border-gray-200 pt-3">
-                        <label class="block font-bold text-gray-800 mb-1">Direct Import (JSON Backup)</label>
-                        <input type="file" accept=".json" onchange="importJSONData(event)" class="w-full bg-white border border-gray-200 rounded-xl p-2 text-xs">
-                    </div>
-
-                    <button onclick="openSettings()" class="w-full bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl mt-2">Back to Settings</button>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function importJSONData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedState = JSON.parse(e.target.result);
-                    if (importedState && importedState.children && importedState.logs) {
-                        state = importedState;
-                        saveData();
-                        alert("Data successfully imported!");
-                        closeModal();
-                    } else {
-                        alert("Invalid backup file format.");
-                    }
-                } catch (err) {
-                    alert("Error parsing JSON file.");
-                }
-            };
-            reader.readAsText(file);
         }
 
         function closeModal() { document.getElementById('appModal').classList.add('hidden'); }
