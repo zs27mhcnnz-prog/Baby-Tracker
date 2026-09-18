@@ -606,46 +606,126 @@
 
         // --- CSV Import ---
         function importCSVData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+    const file = event.target.files[0];
+    if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const lines = text.split('\n').filter(l => l.trim().length > 0);
-                if (lines.length < 2) return alert("Invalid CSV layout.");
+    updateSyncProgress(20);
+    const reader = new FileReader();
 
-                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-                const activeChild = getActiveChild();
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        const rows = parseCSVToObjects(text);
 
-                for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(',').map(v => v.trim());
-                    if (values.length < headers.length) continue;
-
-                    let log = {
-                        id: Date.now().toString() + Math.random().toString(36).substring(2,5),
-                        childId: activeChild.id,
-                        startTime: Date.now()
-                    };
-
-                    headers.forEach((h, idx) => {
-                        const val = values[idx];
-                        if (h === 'type') log.type = val.toLowerCase();
-                        if (h === 'amount') log.amount = parseFloat(val) || 0;
-                        if (h === 'diapertype' || h === 'diaper') log.diaperType = val;
-                        if (h === 'notes') log.notes = val;
-                        if (h === 'starttime' || h === 'date') log.startTime = new Date(val).getTime() || Date.now();
-                    });
-
-                    if (log.type) state.logs.push(log);
-                }
-
-                saveData();
-                alert("CSV Data imported successfully!");
-                closeModal();
-            };
-            reader.readAsText(file);
+        if (rows.length === 0) {
+            alert("No valid rows found in the CSV file.");
+            updateSyncProgress(100);
+            return;
         }
+
+        updateSyncProgress(50);
+
+        // Process rows into local application state
+        rows.forEach(row => {
+            const profileName = (row['Profile Name'] || 'Baby').trim();
+            let child = state.children.find(c => c.name.toLowerCase() === profileName.toLowerCase());
+
+            if (!child) {
+                child = {
+                    id: 'child_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                    name: profileName,
+                    gender: ((row['[Profile] Sex'] || '').toLowerCase().includes('female')) ? 'girl' : 'boy',
+                    birthdate: row['[Profile] Birth Date'] || '',
+                    showNursing: true, showBottle: true, showDiaper: true, showSleep: true
+                };
+                state.children.push(child);
+            }
+
+            let startTime = parseFloat(row['Start Date/time (Epoch)']);
+            if (isNaN(startTime) || !startTime) startTime = new Date(row['Start Date/time'] || Date.now()).getTime();
+
+            const rawType = (row['Type'] || '').trim();
+            const activityKey = row['_activityKey'] || ('csv_' + Date.now() + '_' + Math.random().toString(36).substring(2,7));
+
+            // Prevent duplicate entries
+            if (state.logs.some(l => l.id === activityKey)) return;
+
+            let log = { id: activityKey, childId: child.id, startTime: startTime, notes: row['Note'] || '' };
+
+            if (rawType === 'Breastfeed' || rawType === 'Nursing') {
+                log.type = 'nursing';
+                const leftSec = parseFloat(row['[Breastfeed] Left Duration (Seconds)']) || 0;
+                const rightSec = parseFloat(row['[Breastfeed] Right Duration (Seconds)']) || 0;
+                log.side = (leftSec > 0 && rightSec > 0) ? 'Both' : (rightSec > 0 ? 'Right' : 'Left');
+                if (leftSec + rightSec > 0) log.endTime = startTime + ((leftSec + rightSec) * 1000);
+            } else if (rawType === 'Sleep') {
+                log.type = 'sleep';
+                let endEpoch = parseFloat(row['[Sleep] End Date/time (Epoch)']);
+                if (!isNaN(endEpoch) && endEpoch > 0) log.endTime = endEpoch;
+                else if (row['[Sleep] Duration (Seconds)']) log.endTime = startTime + (parseFloat(row['[Sleep] Duration (Seconds)']) * 1000);
+            } else if (rawType === 'Diaper') {
+                log.type = 'diaper';
+                const rawDiaper = (row['[Diaper] Type'] || '').trim();
+                log.diaperType = (rawDiaper.includes('Dirty') && rawDiaper.includes('Wet')) ? 'Both' : (rawDiaper.includes('Dirty') ? 'Dirty' : 'Wet');
+            } else if (rawType === 'Bottle' || rawType === 'Formula') {
+                log.type = 'bottle';
+                log.amount = parseFloat(row['Amount']) || 0;
+            }
+
+            if (log.type) state.logs.push(log);
+        });
+
+        updateSyncProgress(80);
+
+        // Sync with Google Sheets backend
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ user: currentUser, action: 'importCsv', rows: rows })
+            });
+        } catch (err) {}
+
+        saveData();
+        updateSyncProgress(100);
+        alert(`Successfully imported CSV data (${rows.length} rows processed).`);
+        closeModal();
+    };
+
+    reader.readAsText(file);
+}
+
+// Robust CSV Parsing helper supporting quoted strings and commas inside notes
+function parseCSVToObjects(csvText) {
+    const lines = csvText.split(/\r\n|\n/);
+    if (lines.length < 2) return [];
+
+    const parseLine = (line) => {
+        const result = [];
+        let cur = '', inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (c === '"') { inQuotes = !inQuotes; }
+            else if (c === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
+            else { cur += c; }
+        }
+        result.push(cur.trim());
+        return result;
+    };
+
+    const headers = parseLine(lines[0]);
+    const objects = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = parseLine(lines[i]);
+        const obj = {};
+        headers.forEach((h, index) => {
+            obj[h] = values[index] !== undefined ? values[index] : '';
+        });
+        objects.push(obj);
+    }
+    return objects;
+}
 
         // Action timer functions...
         function openManualModal(type) {
