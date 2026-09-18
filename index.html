@@ -1160,47 +1160,88 @@
             closeModal();
             saveData();
         }
-
         function openCalendarModal() {
-            const html = `
-                <div class="space-y-3">
-                    <input type="date" id="calDatePicker" value="${new Date().toISOString().split('T')[0]}" onchange="renderCalendarGrid()" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-bold text-gray-800">
-                    <div id="calendarTimeGrid" class="space-y-1 max-h-60 overflow-y-auto pt-2"></div>
-                </div>
-            `;
-            openModal("Daily Time Grid", html);
-            renderCalendarGrid();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const html = `
+        <div class="space-y-3">
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Select Date</label>
+                <input type="date" id="calDatePicker" value="${todayStr}" onchange="renderCalendarGrid()" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-bold text-gray-800">
+            </div>
+            <div id="calendarTimeGrid" class="space-y-2 max-h-72 overflow-y-auto pt-1"></div>
+        </div>
+    `;
+    openModal("Daily Activity Grid", html);
+    renderCalendarGrid();
+}
+
+function renderCalendarGrid() {
+    const pickerVal = document.getElementById('calDatePicker')?.value;
+    if (!pickerVal) return;
+
+    // Construct start and end timestamp bounds for the selected calendar day (local time)
+    const dayStart = new Date(pickerVal + 'T00:00:00').getTime();
+    const dayEnd = new Date(pickerVal + 'T23:59:59').getTime();
+    
+    // Filter logs that overlap with the selected day and match the selected child filter
+    const dayLogs = state.logs.filter(l => {
+        const matchesChild = !state.selectedChildId || l.childId === state.selectedChildId;
+        const logStart = l.startTime;
+        const logEnd = l.endTime || l.startTime;
+
+        // Check if log falls within or spans across the target day
+        const overlapsDay = (logStart <= dayEnd) && (logEnd >= dayStart);
+        return matchesChild && overlapsDay;
+    }).sort((a, b) => a.startTime - b.startTime);
+
+    const gridContainer = document.getElementById('calendarTimeGrid');
+    if (dayLogs.length === 0) {
+        gridContainer.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-xs text-gray-400 border border-gray-100">No activity logged for this day.</div>`;
+        return;
+    }
+
+    let html = '';
+    dayLogs.forEach(l => {
+        const startTimeStr = new Date(l.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const endTimeStr = l.endTime ? new Date(l.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        const child = state.children.find(c => c.id === l.childId);
+
+        let badgeStyle = "bg-gray-100 text-gray-700";
+        let detailText = l.notes || '';
+
+        if (l.type === 'sleep') {
+            badgeStyle = "bg-purple-100 text-purple-700 border-purple-200";
+            const durationMs = (l.endTime || Date.now()) - l.startTime;
+            detailText = `${startTimeStr} - ${endTimeStr} (${formatDuration(durationMs)})`;
+        } else if (l.type === 'bottle') {
+            badgeStyle = "bg-blue-100 text-blue-700 border-blue-200";
+            detailText = `${startTimeStr} • ${l.amount || 0} oz`;
+        } else if (l.type === 'diaper') {
+            badgeStyle = "bg-amber-100 text-amber-800 border-amber-200";
+            detailText = `${startTimeStr} • ${l.diaperType || 'Change'}`;
+        } else if (l.type === 'nursing') {
+            badgeStyle = "bg-rose-100 text-rose-700 border-rose-200";
+            detailText = `${startTimeStr} - ${endTimeStr} (${l.side || 'Session'})`;
         }
 
-        function renderCalendarGrid() {
-            const pickerVal = document.getElementById('calDatePicker')?.value;
-            if (!pickerVal) return;
-            const targetDateStr = pickerVal;
-            
-            const dayLogs = state.logs.filter(l => {
-                const d = new Date(l.startTime).toISOString().split('T')[0];
-                return d === targetDateStr && (!state.selectedChildId || l.childId === state.selectedChildId);
-            });
-
-            const gridContainer = document.getElementById('calendarTimeGrid');
-            if (dayLogs.length === 0) {
-                gridContainer.innerHTML = `<div class="text-center text-xs text-gray-400 py-4">No activity logged for this day.</div>`;
-                return;
-            }
-
-            let html = '';
-            dayLogs.forEach(l => {
-                const timeStr = new Date(l.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                html += `
-                    <div class="bg-white p-2 rounded-lg border border-gray-100 flex items-center justify-between text-xs">
-                        <span class="font-bold text-gray-500">${timeStr}</span>
-                        <span class="font-semibold text-gray-800 capitalize">${l.type} ${l.amount ? `(${l.amount} oz)` : ''}</span>
+        html += `
+            <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-2xs flex items-center justify-between">
+                <div class="space-y-0.5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold capitalize text-gray-800">${l.type}</span>
+                        ${child ? `<span class="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-semibold">${child.name}</span>` : ''}
                     </div>
-                `;
-            });
-            gridContainer.innerHTML = html;
-        }
+                    <div class="text-[11px] font-medium text-gray-500">${detailText}</div>
+                </div>
+                <span class="text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeStyle}">${startTimeStr}</span>
+            </div>
+        `;
+    });
 
+    gridContainer.innerHTML = html;
+}
+
+        
         function openSettings() {
             let childrenHtml = (state.children || []).map((c, i) => `
                 <div class="bg-white p-3 rounded-2xl border border-gray-200 space-y-2 text-left">
