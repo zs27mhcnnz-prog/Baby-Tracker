@@ -94,27 +94,27 @@
                 <div id="summaryDashboardGrid" class="grid grid-cols-2 gap-2 text-center"></div>
             </div>
 
-            <!-- Action Grid -->
+            <!-- Enhanced Action Grid with Custom Visual Icons -->
             <div id="actionGrid" class="grid grid-cols-2 gap-3"></div>
 
             <!-- Instant Diaper Buttons -->
             <div id="instantDiaperSection" class="space-y-1.5">
                 <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">Instant Diaper Log</span>
                 <div class="grid grid-cols-3 gap-2">
-                    <button onclick="quickDiaper('Wet')" class="bg-blue-50 text-blue-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
-                        <i data-lucide="droplet" class="w-3.5 h-3.5"></i> Wet
+                    <button onclick="quickDiaper('Wet')" class="bg-blue-50 text-blue-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-2xs border border-blue-100">
+                        <i data-lucide="droplets" class="w-3.5 h-3.5 text-blue-500"></i> Wet
                     </button>
-                    <button onclick="quickDiaper('Dirty')" class="bg-amber-50 text-amber-700 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
-                        <i data-lucide="circle" class="w-3.5 h-3.5"></i> Dirty
+                    <button onclick="quickDiaper('Dirty')" class="bg-amber-50 text-amber-700 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-2xs border border-amber-100">
+                        <i data-lucide="package" class="w-3.5 h-3.5 text-amber-600"></i> Dirty
                     </button>
-                    <button onclick="quickDiaper('Both')" class="bg-purple-50 text-purple-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Both
+                    <button onclick="quickDiaper('Both')" class="bg-purple-50 text-purple-600 font-semibold text-xs py-2.5 rounded-full flex items-center justify-center gap-1 active:scale-95 transition shadow-2xs border border-purple-100">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-500"></i> Both
                     </button>
                 </div>
             </div>
 
-            <!-- Logs Feed Header & Mass Delete Actions -->
-            <div class="space-y-2 pt-2">
+            <!-- Logs Feed Header, Filter Control Panel & Mass Delete Actions -->
+            <div class="space-y-3 pt-2">
                 <div class="flex items-center justify-between px-1">
                     <h2 class="text-sm font-bold text-gray-800">Logs Feed</h2>
                     <div class="flex items-center gap-2">
@@ -123,6 +123,44 @@
                         <button id="deleteSelectedBtn" onclick="deleteSelectedLogs()" class="text-xs font-semibold text-white bg-rose-500 px-2.5 py-1 rounded-full hidden">Delete Selected</button>
                     </div>
                 </div>
+
+                <!-- Log Filter Bar -->
+                <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-2xs space-y-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Type Filter</label>
+                            <select id="filterType" onchange="applyFilters()" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs font-semibold text-gray-700">
+                                <option value="all">All Types</option>
+                                <option value="nursing">Nursing</option>
+                                <option value="sleep">Sleep</option>
+                                <option value="bottle">Bottle</option>
+                                <option value="diaper">Diaper</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Date Filter</label>
+                            <select id="filterDateRange" onchange="handleDateRangeChange()" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs font-semibold text-gray-700">
+                                <option value="all">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="7days">Last 7 Days</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Custom Date Input Controls (Hidden by default) -->
+                    <div id="customDateContainer" class="grid grid-cols-2 gap-2 hidden pt-1 border-t border-gray-100">
+                        <div>
+                            <label class="text-[9px] font-bold text-gray-400 uppercase">From</label>
+                            <input id="filterStartDate" type="date" onchange="applyFilters()" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-bold text-gray-400 uppercase">To</label>
+                            <input id="filterEndDate" type="date" onchange="applyFilters()" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs">
+                        </div>
+                    </div>
+                </div>
+
                 <div id="logsContainer" class="space-y-2"></div>
             </div>
         </main>
@@ -340,7 +378,7 @@
                 grid.className = "grid grid-cols-3 gap-2 text-center";
                 html += `
                     <div class="bg-blue-50/60 rounded-xl p-2.5">
-                        <i data-lucide="droplet" class="w-4 h-4 text-blue-500 mx-auto mb-1"></i>
+                        <i data-lucide="milk" class="w-4 h-4 text-blue-500 mx-auto mb-1"></i>
                         <div class="font-bold text-sm text-gray-800">${formula.toFixed(1)} oz</div>
                         <div class="text-[10px] text-gray-500 font-medium">Formula</div>
                     </div>
@@ -351,7 +389,7 @@
 
             html += `
                 <div class="bg-purple-50/60 rounded-xl p-2.5">
-                    <i data-lucide="moon" class="w-4 h-4 text-purple-500 mx-auto mb-1"></i>
+                    <i data-lucide="moon-star" class="w-4 h-4 text-purple-500 mx-auto mb-1"></i>
                     <div class="font-bold text-sm text-gray-800">${(totalSleepMs / 3600000).toFixed(1)}h</div>
                     <div class="text-[10px] text-purple-600 font-semibold">Sleep Log</div>
                 </div>
@@ -364,47 +402,66 @@
             grid.innerHTML = html;
         }
 
+        // --- Render Action Grid with Enhanced Visual Icons ---
         function renderActionGrid() {
             const child = getActiveChild();
             const grid = document.getElementById('actionGrid');
             if(!child) return;
 
             let html = '';
-            if(child.showNursing) {
+            if(child.showNursing !== false) {
                 html += `
-                    <button onclick="openNursingTimer()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center"><i data-lucide="timer" class="w-5 h-5"></i></div>
+                    <button onclick="openNursingTimer()" class="bg-gradient-to-b from-rose-50/50 to-white p-4 rounded-2xl shadow-sm border border-rose-100 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+                            <i data-lucide="heart-handshake" class="w-6 h-6"></i>
+                        </div>
                         <span class="text-xs font-bold text-gray-800">Nursing Timer</span>
                     </button>
                 `;
             }
-            if(child.showSleep) {
+            if(child.showSleep !== false) {
                 const isSleeping = !!child.activeSleepStart;
                 html += `
-                    <button onclick="openSleepTimer()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full ${isSleeping ? 'bg-purple-500 text-white animate-pulse' : 'bg-purple-50 text-purple-500'} flex items-center justify-center"><i data-lucide="moon-star" class="w-5 h-5"></i></div>
+                    <button onclick="openSleepTimer()" class="bg-gradient-to-b from-purple-50/50 to-white p-4 rounded-2xl shadow-sm border border-purple-100 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition">
+                        <div class="w-12 h-12 rounded-2xl ${isSleeping ? 'bg-purple-600 text-white animate-pulse' : 'bg-purple-500 text-white'} flex items-center justify-center shadow-xs">
+                            <i data-lucide="moon-star" class="w-6 h-6"></i>
+                        </div>
                         <span class="text-xs font-bold text-gray-800">${isSleeping ? 'Sleeping...' : 'Sleep Timer'}</span>
                     </button>
                 `;
             }
-            if(child.showBottle) {
+            if(child.showBottle !== false) {
                 html += `
-                    <button onclick="openManualModal('bottle')" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center"><i data-lucide="droplet" class="w-5 h-5"></i></div>
-                        <span class="text-xs font-bold text-gray-800">Bottle</span>
+                    <button onclick="openManualModal('bottle')" class="bg-gradient-to-b from-blue-50/50 to-white p-4 rounded-2xl shadow-sm border border-blue-100 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-xs">
+                            <i data-lucide="milk" class="w-6 h-6"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-800">Bottle Feed</span>
                     </button>
                 `;
             }
-            if(child.showDiaper) {
+            if(child.showDiaper !== false) {
                 html += `
-                    <button onclick="openManualModal('diaper')" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-400 flex items-center justify-center"><i data-lucide="layers" class="w-5 h-5"></i></div>
-                        <span class="text-xs font-bold text-gray-800">Diaper</span>
+                    <button onclick="openManualModal('diaper')" class="bg-gradient-to-b from-amber-50/50 to-white p-4 rounded-2xl shadow-sm border border-amber-100 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                            <i data-lucide="layers" class="w-6 h-6"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-800">Diaper Change</span>
                     </button>
                 `;
             }
             grid.innerHTML = html;
         }
+
+        // --- Log Feed Filters ---
+        function handleDateRangeChange() {
+            const range = document.getElementById('filterDateRange').value;
+            const customContainer = document.getElementById('customDateContainer');
+            customContainer.classList.toggle('hidden', range !== 'custom');
+            applyFilters();
+        }
+
+        function applyFilters() { renderLogs(); }
 
         // --- Logs Feed & Mass Selection ---
         function toggleMassSelectMode() {
@@ -417,7 +474,7 @@
         }
 
         function toggleSelectAllLogs() {
-            const visibleLogs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
+            const visibleLogs = getFilteredLogs();
             if (selectedLogIds.size === visibleLogs.length) {
                 selectedLogIds.clear();
             } else {
@@ -442,12 +499,47 @@
             }
         }
 
-        function renderLogs() {
-            const container = document.getElementById('logsContainer');
+        function getFilteredLogs() {
             let logs = (state.logs || []).filter(l => !state.selectedChildId || l.childId === state.selectedChildId);
 
+            // Filter by Type
+            const typeFilter = document.getElementById('filterType') ? document.getElementById('filterType').value : 'all';
+            if (typeFilter !== 'all') {
+                logs = logs.filter(l => l.type === typeFilter);
+            }
+
+            // Filter by Date Range
+            const dateRange = document.getElementById('filterDateRange') ? document.getElementById('filterDateRange').value : 'all';
+            const now = new Date();
+
+            if (dateRange === 'today') {
+                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                logs = logs.filter(l => l.startTime >= startOfDay);
+            } else if (dateRange === '7days') {
+                const sevenDaysAgo = Date.now() - (7 * 86400000);
+                logs = logs.filter(l => l.startTime >= sevenDaysAgo);
+            } else if (dateRange === 'custom') {
+                const startVal = document.getElementById('filterStartDate').value;
+                const endVal = document.getElementById('filterEndDate').value;
+                if (startVal) {
+                    const startTime = new Date(startVal + 'T00:00:00').getTime();
+                    logs = logs.filter(l => l.startTime >= startTime);
+                }
+                if (endVal) {
+                    const endTime = new Date(endVal + 'T23:59:59').getTime();
+                    logs = logs.filter(l => l.startTime <= endTime);
+                }
+            }
+
+            return logs;
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logsContainer');
+            let logs = getFilteredLogs();
+
             if (logs.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs bg-white rounded-2xl border border-gray-100">No logs found.</div>`;
+                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs bg-white rounded-2xl border border-gray-100">No matching logs found.</div>`;
                 return;
             }
 
@@ -456,11 +548,11 @@
                 const childObj = state.children.find(c => c.id === log.childId);
                 const timeStr = new Date(log.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date(log.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 
-                let icon = 'droplet', color = 'bg-blue-500', detail = '';
-                if(log.type === 'nursing') { icon = 'heart'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'}`; }
-                if(log.type === 'sleep') { icon = 'moon'; color = 'bg-purple-500'; detail = log.endTime ? `${Math.round((log.endTime - log.startTime)/60000)} mins` : 'Ongoing'; }
-                if(log.type === 'bottle') { icon = 'droplet'; color = 'bg-blue-500'; detail = `${log.amount} oz`; }
-                if(log.type === 'diaper') { icon = 'layers'; color = 'bg-orange-400'; detail = `Type: ${log.diaperType}`; }
+                let icon = 'milk', color = 'bg-blue-500', detail = '';
+                if(log.type === 'nursing') { icon = 'heart-handshake'; color = 'bg-rose-500'; detail = `Side: ${log.side || 'Left'}`; }
+                if(log.type === 'sleep') { icon = 'moon-star'; color = 'bg-purple-500'; detail = log.endTime ? `${Math.round((log.endTime - log.startTime)/60000)} mins` : 'Ongoing'; }
+                if(log.type === 'bottle') { icon = 'milk'; color = 'bg-blue-500'; detail = `${log.amount} oz`; }
+                if(log.type === 'diaper') { icon = 'layers'; color = 'bg-amber-500'; detail = `Type: ${log.diaperType}`; }
 
                 const isChecked = selectedLogIds.has(log.id);
 
@@ -511,7 +603,6 @@
 
             let blocksHtml = '';
 
-            // Render 24 hour grid lines & event blocks
             for (let hour = 0; hour < 24; hour++) {
                 const hourLabel = new Date(startOfDay + hour * 3600000).toLocaleTimeString([], { hour: 'numeric', hour12: true });
                 blocksHtml += `
@@ -525,9 +616,9 @@
             let eventsHtml = '';
             dayLogs.forEach(l => {
                 const offsetMinutes = (l.startTime - startOfDay) / 60000;
-                const topPx = (offsetMinutes / 60) * 48; // 48px per hour
+                const topPx = (offsetMinutes / 60) * 48;
 
-                let durationMins = 30; // default block size for instant logs
+                let durationMins = 30;
                 if (l.endTime && l.endTime > l.startTime) {
                     durationMins = Math.max(15, (l.endTime - l.startTime) / 60000);
                 }
@@ -644,7 +735,7 @@
             }
         }
 
-        // --- Settings & Child State Handling ---
+        // --- Settings & Child State Handling with Per-Child Action Customization ---
         function openSettings() {
             document.getElementById('modalTitle').innerText = `Settings (${currentUser})`;
             document.getElementById('appModal').classList.remove('hidden');
@@ -652,7 +743,7 @@
             let childrenHtml = '';
             (state.children || []).forEach(c => {
                 childrenHtml += `
-                    <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100">
+                    <div class="bg-white p-3 rounded-xl space-y-3 border border-gray-100">
                         <input type="text" value="${c.name || ''}" onchange="updateChildProp('${c.id}', 'name', this.value)" class="w-full font-bold bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
                         
                         <div class="grid grid-cols-2 gap-2">
@@ -667,6 +758,29 @@
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase">Birthdate</label>
                                 <input type="date" value="${c.birthdate || ''}" onchange="updateChildProp('${c.id}', 'birthdate', this.value)" class="w-full mt-0.5 bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-medium text-gray-700">
+                            </div>
+                        </div>
+
+                        <!-- Per-Child Action Tiles Toggles -->
+                        <div class="pt-2 border-t border-gray-100 space-y-1.5">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Visible Action Tiles</span>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <label class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                    <input type="checkbox" ${c.showNursing !== false ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showNursing', this.checked)" class="accent-rose-500 rounded">
+                                    <span class="font-semibold text-gray-700">Nursing</span>
+                                </label>
+                                <label class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                    <input type="checkbox" ${c.showSleep !== false ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showSleep', this.checked)" class="accent-purple-500 rounded">
+                                    <span class="font-semibold text-gray-700">Sleep</span>
+                                </label>
+                                <label class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                    <input type="checkbox" ${c.showBottle !== false ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showBottle', this.checked)" class="accent-blue-500 rounded">
+                                    <span class="font-semibold text-gray-700">Bottle</span>
+                                </label>
+                                <label class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                    <input type="checkbox" ${c.showDiaper !== false ? 'checked' : ''} onchange="updateChildProp('${c.id}', 'showDiaper', this.checked)" class="accent-amber-500 rounded">
+                                    <span class="font-semibold text-gray-700">Diaper</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -711,7 +825,7 @@
                         <option value="Wet">Wet</option><option value="Dirty">Dirty</option><option value="Both">Both</option>
                     </select>
                     <input id="manualNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm">
-                    <button onclick="saveManualEntry('diaper')" class="w-full bg-orange-400 text-white font-bold py-3 rounded-xl">Save Diaper Log</button>
+                    <button onclick="saveManualEntry('diaper')" class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl">Save Diaper Log</button>
                 </div>`;
             document.getElementById('modalBody').innerHTML = bodyHtml;
         }
