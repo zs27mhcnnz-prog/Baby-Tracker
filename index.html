@@ -1184,17 +1184,6 @@
             saveData();
         }
 
-        function openCalendarModal() {
-            const html = `
-                <div class="space-y-3">
-                    <input type="date" id="calDatePicker" value="${new Date().toISOString().split('T')[0]}" onchange="renderCalendarGrid()" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-bold text-gray-800">
-                    <div id="calendarTimeGrid" class="space-y-1 max-h-60 overflow-y-auto pt-2"></div>
-                </div>
-            `;
-            openModal("Daily Time Grid", html);
-            renderCalendarGrid();
-        }
-
         function renderCalendarGrid() {
             const pickerVal = document.getElementById('calDatePicker')?.value;
             if (!pickerVal) return;
@@ -1223,7 +1212,7 @@
             });
             gridContainer.innerHTML = html;
         }
-
+        
         function openSettings() {
             let childrenHtml = (state.children || []).map((c, i) => `
                 <div class="bg-white p-3 rounded-2xl border border-gray-200 space-y-2 text-left">
