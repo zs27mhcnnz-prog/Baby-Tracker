@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Canvas Confetti for Birthdays -->
+    <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -24,7 +24,7 @@
 </head>
 <body class="flex flex-col min-h-screen pb-12 select-none">
 
-    <!-- Login Screen Container -->
+    <!-- Login Screen -->
     <div id="loginScreen" class="fixed inset-0 bg-[#f2f2f7] z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-xl border border-gray-100 space-y-5 text-center">
             <div class="w-14 h-14 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <!-- Top Navigation Header -->
+    <!-- Top Header -->
     <header class="sticky top-0 z-30 bg-[#f2f2f7]/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2">
             <h1 class="text-xl font-bold tracking-tight">Baby Tracker</h1>
@@ -62,11 +62,10 @@
     </header>
 
     <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 space-y-4">
-        
-        <!-- Child Profile Selector Tabs -->
+        <!-- Child Selector -->
         <div id="childSelector" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
 
-        <!-- Selected Child Details Card (Age & Gender Display) -->
+        <!-- Selected Child Age/Gender Header Card -->
         <div id="childMetaCard" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hidden">
             <div class="flex items-center gap-3">
                 <div id="childMetaGenderBadge" class="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold">
@@ -83,7 +82,7 @@
             <button onclick="openSettings()" class="text-xs text-rose-500 font-semibold hover:underline">Edit</button>
         </div>
 
-        <!-- Dashboard Card -->
+        <!-- Summary Dashboard Card -->
         <div id="summaryCardContainer" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hidden">
             <div class="flex justify-between items-center mb-3">
                 <div class="flex items-center gap-1.5 text-rose-500 font-semibold text-sm">
@@ -92,15 +91,15 @@
                 </div>
             </div>
             <div class="grid grid-cols-3 gap-2 text-center">
-                <div onclick="openSummaryDetail('formula')" class="bg-blue-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
+                <div onclick="openSummaryDetail('bottle')" class="bg-blue-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
                     <i data-lucide="droplet" class="w-4 h-4 text-blue-500 mx-auto mb-1"></i>
                     <div id="summaryFormula" class="font-bold text-sm text-gray-800">0.0 oz</div>
                     <div class="text-[10px] text-gray-500 font-medium">Formula</div>
                 </div>
-                <div onclick="openSleepCalendarModal()" class="bg-purple-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer relative">
+                <div onclick="openSleepCalendarModal()" class="bg-purple-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
                     <i data-lucide="moon" class="w-4 h-4 text-purple-500 mx-auto mb-1"></i>
                     <div id="summarySleep" class="font-bold text-sm text-gray-800">0.0h</div>
-                    <div class="text-[10px] text-purple-600 font-semibold">Sleep</div>
+                    <div class="text-[10px] text-purple-600 font-semibold">Sleep Log</div>
                 </div>
                 <div onclick="openSummaryDetail('diaper')" class="bg-orange-50/60 rounded-xl p-2.5 active:scale-95 transition cursor-pointer">
                     <i data-lucide="layers" class="w-4 h-4 text-orange-400 mx-auto mb-1"></i>
@@ -110,10 +109,10 @@
             </div>
         </div>
 
-        <!-- Dynamic Action Buttons Grid -->
+        <!-- Action Grid -->
         <div id="actionGrid" class="grid grid-cols-2 gap-3"></div>
 
-        <!-- Instant Diaper Log Chips -->
+        <!-- Instant Diaper Buttons -->
         <div id="instantDiaperSection" class="space-y-1.5">
             <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">Instant Diaper Log</span>
             <div class="grid grid-cols-3 gap-2">
@@ -129,7 +128,7 @@
             </div>
         </div>
 
-        <!-- Recent Logs Feed -->
+        <!-- Logs Feed -->
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
                 <h2 class="text-sm font-bold text-gray-800">Logs Feed</h2>
@@ -138,7 +137,7 @@
         </div>
     </main>
 
-    <!-- Generic Centered Modal Popup -->
+    <!-- Generic Modal -->
     <div id="appModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 transition-opacity">
         <div id="modalBox" class="bg-[#f2f2f7] w-full max-w-md mx-auto rounded-3xl max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl">
             <div class="flex justify-between items-center border-b border-gray-200 pb-3">
@@ -238,7 +237,6 @@
 
         async function forceSync() { await loadData(); await saveData(); }
 
-        // --- Exact Age Calculation Helper (Years, Months, Days) ---
         function calculateExactAge(birthdateStr) {
             if (!birthdateStr) return "Birthdate not set";
             const birthDate = new Date(birthdateStr + 'T00:00:00');
@@ -282,7 +280,7 @@
             const container = document.getElementById('childSelector');
             let html = `<button onclick="selectChild(null)" class="px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${state.selectedChildId === null ? 'bg-rose-500 text-white' : 'bg-white text-gray-700 shadow-xs'}">All Children</button>`;
             
-            state.children.forEach(child => {
+            (state.children || []).forEach(child => {
                 const isSelected = state.selectedChildId === child.id;
                 html += `<button onclick="selectChild('${child.id}')" class="px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${isSelected ? 'bg-rose-500 text-white' : 'bg-white text-gray-700 shadow-xs'}">${child.name}</button>`;
             });
@@ -372,10 +370,11 @@
                 `;
             }
             if(child.showSleep) {
+                const isSleeping = !!child.activeSleepStart;
                 html += `
                     <button onclick="openSleepTimer()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-                        <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center"><i data-lucide="moon-star" class="w-5 h-5"></i></div>
-                        <span class="text-xs font-bold text-gray-800">Sleep Timer</span>
+                        <div class="w-10 h-10 rounded-full ${isSleeping ? 'bg-purple-500 text-white animate-pulse' : 'bg-purple-50 text-purple-500'} flex items-center justify-center"><i data-lucide="moon-star" class="w-5 h-5"></i></div>
+                        <span class="text-xs font-bold text-gray-800">${isSleeping ? 'Sleeping...' : 'Sleep Timer'}</span>
                     </button>
                 `;
             }
@@ -436,7 +435,7 @@
             container.innerHTML = html;
         }
 
-        // --- Nursing Timer with Reset Fix ---
+        // --- Nursing Timer Controls ---
         function openNursingTimer() {
             const modal = document.getElementById('appModal');
             document.getElementById('modalTitle').innerText = "Live Nursing Timer";
@@ -484,7 +483,6 @@
             }
         }
 
-        // Bug Fix: Reset explicitly resets variables and screen text directly
         function resetNursingTimer() {
             window.nursingElapsed = 0;
             window.nursingRunning = false;
@@ -515,6 +513,109 @@
             saveData();
         }
 
+        // --- Sleep Timer & Tracker ---
+        function openSleepTimer() {
+            const child = getActiveChild();
+            const modal = document.getElementById('appModal');
+            document.getElementById('modalTitle').innerText = "Sleep Tracker";
+            modal.classList.remove('hidden');
+
+            const isSleeping = !!child.activeSleepStart;
+
+            document.getElementById('modalBody').innerHTML = `
+                <div class="space-y-4 text-center">
+                    <div class="text-sm text-gray-500 font-medium">Status: <span class="font-bold ${isSleeping ? 'text-purple-600' : 'text-gray-800'}">${isSleeping ? 'Currently Sleeping' : 'Awake'}</span></div>
+                    ${isSleeping ? `
+                        <button onclick="stopSleepTimer()" class="w-full bg-purple-600 text-white font-bold py-4 rounded-xl text-base shadow-sm">Wake Up (Stop Sleep)</button>
+                    ` : `
+                        <button onclick="startSleepTimer()" class="w-full bg-purple-500 text-white font-bold py-4 rounded-xl text-base shadow-sm">Start Sleep Session</button>
+                    `}
+                    <input id="sleepNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base">
+                </div>
+            `;
+        }
+
+        function startSleepTimer() {
+            const child = getActiveChild();
+            child.activeSleepStart = Date.now();
+            closeModal();
+            saveData();
+        }
+
+        function stopSleepTimer() {
+            const child = getActiveChild();
+            if (!child.activeSleepStart) return;
+            const notes = document.getElementById('sleepNotes').value;
+            
+            state.logs.push({
+                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
+                type: 'sleep',
+                startTime: child.activeSleepStart,
+                endTime: Date.now(),
+                notes: notes,
+                childId: child.id
+            });
+
+            child.activeSleepStart = null;
+            closeModal();
+            saveData();
+        }
+
+        // --- Manual Log Modal ---
+        function openManualModal(type) {
+            const modal = document.getElementById('appModal');
+            document.getElementById('modalTitle').innerText = `Log ${type.toUpperCase()}`;
+            modal.classList.remove('hidden');
+
+            let bodyHtml = '';
+            if (type === 'bottle') {
+                bodyHtml = `
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold text-gray-400 uppercase">Amount (oz)</label>
+                        <input id="manualAmount" type="number" step="0.5" value="4.0" class="w-full bg-white border border-gray-200 rounded-xl p-3 text-lg font-bold text-gray-800">
+                        <input id="manualNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm">
+                        <button onclick="saveManualEntry('bottle')" class="w-full bg-blue-500 text-white font-bold py-3 rounded-xl">Save Bottle Log</button>
+                    </div>
+                `;
+            } else if (type === 'diaper') {
+                bodyHtml = `
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold text-gray-400 uppercase">Diaper Type</label>
+                        <select id="manualDiaperType" class="w-full bg-white border border-gray-200 rounded-xl p-3 text-base font-semibold">
+                            <option value="Wet">Wet</option>
+                            <option value="Dirty">Dirty</option>
+                            <option value="Both">Both</option>
+                        </select>
+                        <input id="manualNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm">
+                        <button onclick="saveManualEntry('diaper')" class="w-full bg-orange-400 text-white font-bold py-3 rounded-xl">Save Diaper Log</button>
+                    </div>
+                `;
+            }
+            document.getElementById('modalBody').innerHTML = bodyHtml;
+        }
+
+        function saveManualEntry(type) {
+            const child = getActiveChild();
+            const notes = document.getElementById('manualNotes').value;
+            const log = {
+                id: Date.now().toString() + Math.random().toString(36).substring(2,5),
+                type: type,
+                startTime: Date.now(),
+                childId: child.id,
+                notes: notes
+            };
+
+            if (type === 'bottle') {
+                log.amount = parseFloat(document.getElementById('manualAmount').value) || 0;
+            } else if (type === 'diaper') {
+                log.diaperType = document.getElementById('manualDiaperType').value;
+            }
+
+            state.logs.push(log);
+            closeModal();
+            saveData();
+        }
+
         function quickDiaper(type) {
             const child = getActiveChild();
             state.logs.push({
@@ -528,12 +629,59 @@
             saveData();
         }
 
+        function openSummaryDetail(filterType) {
+            const logs = (state.logs || []).filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === filterType);
+            document.getElementById('modalTitle').innerText = `${filterType.toUpperCase()} History`;
+            document.getElementById('appModal').classList.remove('hidden');
+
+            let html = `<div class="space-y-2">`;
+            logs.sort((a,b) => b.startTime - a.startTime).slice(0, 15).forEach(l => {
+                const dateStr = new Date(l.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const detail = l.type === 'bottle' ? `${l.amount} oz` : `Type: ${l.diaperType}`;
+                html += `
+                    <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-xs">
+                        <div>
+                            <span class="font-bold text-gray-800">${detail}</span>
+                            <div class="text-gray-400">${l.notes || 'No notes'}</div>
+                        </div>
+                        <div class="text-gray-400">${dateStr}</div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            document.getElementById('modalBody').innerHTML = html;
+        }
+
+        function openSleepCalendarModal() {
+            const sleepLogs = (state.logs || []).filter(l => (!state.selectedChildId || l.childId === state.selectedChildId) && l.type === 'sleep');
+            document.getElementById('modalTitle').innerText = "Sleep Logs Calendar";
+            document.getElementById('appModal').classList.remove('hidden');
+
+            let html = `<div class="space-y-2">`;
+            sleepLogs.sort((a,b) => b.startTime - a.startTime).slice(0, 15).forEach(l => {
+                const dateStr = new Date(l.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const duration = l.endTime ? `${Math.round((l.endTime - l.startTime) / 60000)} mins` : 'Ongoing';
+                html += `
+                    <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-xs">
+                        <div>
+                            <span class="font-bold text-purple-700">${duration}</span>
+                            <div class="text-gray-400">${l.notes || 'No notes'}</div>
+                        </div>
+                        <div class="text-gray-400">${dateStr}</div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            document.getElementById('modalBody').innerHTML = html;
+        }
+
+        // --- Settings and Profile Synchronization ---
         function openSettings() {
             document.getElementById('modalTitle').innerText = `Settings (${currentUser})`;
             document.getElementById('appModal').classList.remove('hidden');
 
             let childrenHtml = '';
-            state.children.forEach(c => {
+            (state.children || []).forEach(c => {
                 childrenHtml += `
                     <div class="bg-white p-3 rounded-xl space-y-2 border border-gray-100">
                         <input type="text" value="${c.name}" onchange="updateChildProp('${c.id}', 'name', this.value)" class="w-full font-bold bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm">
@@ -582,7 +730,34 @@
             lucide.createIcons();
         }
 
-        // --- Data Upload Instructions Page ---
+        function updateChildProp(id, prop, val) {
+            const c = state.children.find(ch => ch.id === id);
+            if (c) { 
+                c[prop] = val; 
+                saveData(); 
+            }
+        }
+
+        function addChildProfile() {
+            const name = prompt("Enter child name:", "Baby");
+            if(name) {
+                state.children.push({
+                    id: Date.now().toString() + Math.random().toString(36).substring(2,5),
+                    name: name,
+                    gender: 'unspecified',
+                    birthdate: '',
+                    showNursing: true,
+                    showBottle: true,
+                    showDiaper: true,
+                    showSleep: true,
+                    activeSleepStart: null,
+                    lastConfettiTime: null
+                });
+                saveData();
+                openSettings();
+            }
+        }
+
         function openUploadInstructionsModal() {
             document.getElementById('modalTitle').innerText = "Upload Data Instructions";
             document.getElementById('modalBody').innerHTML = `
@@ -635,34 +810,7 @@
             reader.readAsText(file);
         }
 
-        function updateChildProp(id, prop, val) {
-            const c = state.children.find(ch => ch.id === id);
-            if(c) { c[prop] = val; saveData(); }
-        }
-
-        function addChildProfile() {
-            const name = prompt("Enter child name:", "Baby");
-            if(name) {
-                state.children.push({
-                    id: Date.now().toString() + Math.random().toString(36).substring(2,5),
-                    name: name,
-                    gender: 'unspecified',
-                    birthdate: '',
-                    showNursing: true,
-                    showBottle: true,
-                    showDiaper: true,
-                    showSleep: true,
-                    activeSleepStart: null,
-                    lastConfettiTime: null
-                });
-                saveData();
-                openSettings();
-            }
-        }
-
         function closeModal() { document.getElementById('appModal').classList.add('hidden'); }
-        function openManualModal(type) { /* Unchanged modal opening helper */ }
-        function openSleepCalendarModal() { /* Unchanged calendar opening helper */ }
     </script>
 </body>
 </html>
