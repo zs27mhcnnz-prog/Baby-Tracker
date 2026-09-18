@@ -184,36 +184,9 @@
 
                 <section class="space-y-1.5 text-xs text-gray-600">
                     <h3 class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                        <i data-lucide="sliders" class="w-4 h-4 text-purple-500"></i> Per-Child Custom Action Tiles
+                        <i data-lucide="sliders" class="w-4 h-4 text-purple-500"></i> Customizing Action Cards
                     </h3>
-                    <p>Customize which quick action tiles (Nursing, Sleep, Bottle, Diaper) appear on the dashboard for each child:</p>
-                    <ol class="list-decimal pl-4 space-y-1 pt-1">
-                        <li>Tap the <strong>Settings (Gear)</strong> icon in the top bar.</li>
-                        <li>Find your child's profile card.</li>
-                        <li>Toggle individual action tiles on or off depending on what you need to track.</li>
-                    </ol>
-                </section>
-
-                <section class="space-y-1.5 text-xs text-gray-600 border-t border-gray-100 pt-3">
-                    <h3 class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                        <i data-lucide="filter" class="w-4 h-4 text-blue-500"></i> Filtering Logs
-                    </h3>
-                    <p>Narrow down your log history using the filter panel above the Logs Feed:</p>
-                    <ul class="list-disc pl-4 space-y-1 pt-1">
-                        <li><strong>Type Filter:</strong> Filter entries by Nursing, Sleep, Bottle, or Diaper.</li>
-                        <li><strong>Date Filter:</strong> Choose All Time, Today, Last 7 Days, or select a custom date range.</li>
-                    </ul>
-                </section>
-
-                <section class="space-y-1.5 text-xs text-gray-600 border-t border-gray-100 pt-3">
-                    <h3 class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                        <i data-lucide="file-up" class="w-4 h-4 text-emerald-500"></i> CSV Export & Import Instructions
-                    </h3>
-                    <p>Back up or restore your tracking history using CSV files:</p>
-                    <ul class="list-disc pl-4 space-y-1 pt-1">
-                        <li><strong>Exporting:</strong> Open Settings and tap <em>Export CSV</em> to save your tracking data locally.</li>
-                        <li><strong>Importing:</strong> Open Settings, select your formatted CSV file, and tap <em>Import CSV</em>.</li>
-                    </ul>
+                    <p>Select profiles or edit action cards under Settings to customize active tracking options for your baby.</p>
                 </section>
             </div>
         </main>
@@ -374,12 +347,18 @@
             return parts.join(', ');
         }
 
+        /* --- Updated Hours & Minutes Duration Formatter --- */
         function formatDuration(ms) {
             if (ms < 0) ms = 0;
             const totalSec = Math.floor(ms / 1000);
-            const mins = Math.floor(totalSec / 60);
+            const hours = Math.floor(totalSec / 3600);
+            const mins = Math.floor((totalSec % 3600) / 60);
             const secs = totalSec % 60;
-            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+            if (hours > 0) {
+                return `${hours}h ${mins}m`;
+            }
+            return `${mins}m ${secs.toString().padStart(2, '0')}s`;
         }
 
         function formatDateTimeLocal(timestamp) {
@@ -480,10 +459,13 @@
                 grid.className = "grid grid-cols-2 gap-2 text-center";
             }
 
+            const sleepHours = Math.floor(totalSleepMs / 3600000);
+            const sleepMins = Math.round((totalSleepMs % 3600000) / 60000);
+
             html += `
                 <div class="bg-purple-50/60 rounded-xl p-2.5">
                     <i data-lucide="moon-star" class="w-4 h-4 text-purple-500 mx-auto mb-1"></i>
-                    <div class="font-bold text-sm text-gray-800">${(totalSleepMs / 3600000).toFixed(1)}h</div>
+                    <div class="font-bold text-sm text-gray-800">${sleepHours}h ${sleepMins}m</div>
                     <div class="text-[10px] text-purple-600 font-semibold">Sleep Log</div>
                 </div>
                 <div class="bg-orange-50/60 rounded-xl p-2.5">
@@ -550,7 +532,6 @@
             grid.innerHTML = html;
         }
 
-        /* --- Global Live Ticker Update --- */
         function getElapsedSleepTime(timer) {
             if (!timer) return 0;
             let total = timer.accumulatedMs || 0;
@@ -595,7 +576,6 @@
             }
         }
 
-        /* --- Persistent Sleep Timer & Active Start-Time Editing --- */
         function openSleepTimerModal() {
             const child = getActiveChild();
             if (!child.sleepTimerState) {
@@ -731,7 +711,6 @@
             closeModal();
         }
 
-        /* --- Dual Nursing Timer Methods --- */
         function openNursingTimer() {
             const child = getActiveChild();
             if (!child.nursingState) {
@@ -851,12 +830,16 @@
             const notesInput = document.getElementById('nursingNotes')?.value || '';
             const sidesSummary = `L: ${leftMin}m | R: ${rightMin}m`;
 
+            const endTime = Date.now();
+            const startTime = endTime - (ns.left.accumulatedMs + ns.right.accumulatedMs);
+
             state.logs.push({
                 id: Date.now().toString(),
                 childId: child.id,
                 type: 'nursing',
                 side: sidesSummary,
-                startTime: Date.now(),
+                startTime: startTime,
+                endTime: endTime,
                 notes: notesInput
             });
 
@@ -870,7 +853,7 @@
             closeModal();
         }
 
-        /* --- Log Editing Functionality --- */
+        /* --- Updated Edit Modal Supporting Both Start Time & End Time --- */
         function openEditLogModal(id) {
             const log = state.logs.find(l => l.id === id);
             if (!log) return;
@@ -904,11 +887,19 @@
                 `;
             }
 
+            const endTimeValue = log.endTime ? formatDateTimeLocal(log.endTime) : formatDateTimeLocal(log.startTime);
+
             const html = `
                 <div class="space-y-3">
-                    <div>
-                        <label class="text-xs font-bold text-gray-500 uppercase">Log Date & Time</label>
-                        <input id="editStartTime" type="datetime-local" value="${formatDateTimeLocal(log.startTime)}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-semibold">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-bold text-gray-500 uppercase">Start Time</label>
+                            <input id="editStartTime" type="datetime-local" value="${formatDateTimeLocal(log.startTime)}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-500 uppercase">End Time</label>
+                            <input id="editEndTime" type="datetime-local" value="${endTimeValue}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold">
+                        </div>
                     </div>
                     ${specificFields}
                     <div>
@@ -926,9 +917,14 @@
             const log = state.logs.find(l => l.id === id);
             if (!log) return;
 
-            const timeVal = document.getElementById('editStartTime')?.value;
-            if (timeVal) {
-                log.startTime = new Date(timeVal).getTime();
+            const startTimeVal = document.getElementById('editStartTime')?.value;
+            const endTimeVal = document.getElementById('editEndTime')?.value;
+
+            if (startTimeVal) {
+                log.startTime = new Date(startTimeVal).getTime();
+            }
+            if (endTimeVal) {
+                log.endTime = new Date(endTimeVal).getTime();
             }
 
             log.notes = document.getElementById('editNotes')?.value || '';
@@ -945,7 +941,6 @@
             closeModal();
         }
 
-        /* --- Logs & Helper Methods --- */
         function handleDateRangeChange() {
             const range = document.getElementById('filterDateRange').value;
             document.getElementById('customDateContainer').classList.toggle('hidden', range !== 'custom');
@@ -1042,8 +1037,8 @@
                 if (log.type === 'diaper') title = `Diaper (${log.diaperType || 'Change'})`;
                 if (log.type === 'nursing') title = `Nursing (${log.side || 'Both'})`;
                 if (log.type === 'sleep') {
-                    const duration = log.endTime ? `${Math.round((log.endTime - log.startTime)/60000)} mins` : 'Ongoing';
-                    title = `Sleep (${duration})`;
+                    const durationMs = (log.endTime || Date.now()) - log.startTime;
+                    title = `Sleep (${formatDuration(durationMs)})`;
                 }
 
                 html += `
@@ -1076,12 +1071,14 @@
             const activeChild = getActiveChild();
             if (!activeChild) return alert("Please add a child first.");
 
+            const now = Date.now();
             const newLog = {
-                id: Date.now().toString(),
+                id: now.toString(),
                 childId: activeChild.id,
                 type: 'diaper',
                 diaperType: type,
-                startTime: Date.now(),
+                startTime: now,
+                endTime: now,
                 notes: ''
             };
 
@@ -1145,12 +1142,14 @@
         function saveManualModal(type) {
             const activeChild = getActiveChild();
             const notes = document.getElementById('modalNotes')?.value || '';
+            const now = Date.now();
 
             const log = {
-                id: Date.now().toString(),
+                id: now.toString(),
                 childId: activeChild.id,
                 type: type,
-                startTime: Date.now(),
+                startTime: now,
+                endTime: now,
                 notes: notes
             };
 
