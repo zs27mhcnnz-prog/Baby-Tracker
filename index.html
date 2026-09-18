@@ -214,17 +214,6 @@
                         <li><strong>Exporting:</strong> Open Settings and tap <em>Export CSV</em> to save your tracking data locally.</li>
                         <li><strong>Importing:</strong> Open Settings, select your formatted CSV file, and tap <em>Import CSV</em>.</li>
                     </ul>
-                    <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-200 mt-2">
-                        <span class="font-bold text-[10px] text-gray-500 uppercase block mb-1">Expected CSV Column Format:</span>
-                        <code class="text-[10px] text-gray-700 block font-mono overflow-x-auto">id, type, startTime, endTime, amount, diaperType, side, notes, childId</code>
-                    </div>
-                </section>
-
-                <section class="space-y-1.5 text-xs text-gray-600 border-t border-gray-100 pt-3">
-                    <h3 class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                        <i data-lucide="calendar" class="w-4 h-4 text-purple-600"></i> Visual Daily Time Grid
-                    </h3>
-                    <p>Tap the <strong>Calendar</strong> button in the top bar to inspect an hour-by-hour visual time block view of feeds, sleep periods, and diaper changes for any selected day.</p>
                 </section>
             </div>
         </main>
@@ -386,10 +375,18 @@
         }
 
         function formatDuration(ms) {
+            if (ms < 0) ms = 0;
             const totalSec = Math.floor(ms / 1000);
             const mins = Math.floor(totalSec / 60);
             const secs = totalSec % 60;
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatDateTimeLocal(timestamp) {
+            if (!timestamp) return '';
+            const d = new Date(timestamp);
+            const tzOffset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
         }
 
         function render() {
@@ -522,7 +519,7 @@
                             <i data-lucide="moon-star" class="w-6 h-6"></i>
                         </div>
                         <div class="text-center">
-                            <span class="text-xs font-bold text-gray-800 block">${isSleeping ? 'Sleep Timer' : 'Sleep Timer'}</span>
+                            <span class="text-xs font-bold text-gray-800 block">Sleep Timer</span>
                             <span id="tileSleepTimerText" class="text-[10px] font-extrabold ${isSleeping ? 'text-purple-600' : 'text-gray-400'} block">
                                 ${isSleeping ? 'Active' : 'Tap to start'}
                             </span>
@@ -560,7 +557,7 @@
             if (timer.isRunning && timer.startTime) {
                 total += (Date.now() - timer.startTime);
             }
-            return total;
+            return Math.max(0, total);
         }
 
         function getElapsedNursingTime(sideTimer) {
@@ -569,13 +566,12 @@
             if (sideTimer.isRunning && sideTimer.startTime) {
                 total += (Date.now() - sideTimer.startTime);
             }
-            return total;
+            return Math.max(0, total);
         }
 
         function updateActiveTimerUI() {
             const child = getActiveChild();
 
-            // Update Tile Sleep text
             const tileText = document.getElementById('tileSleepTimerText');
             if (tileText && child && child.sleepTimerState) {
                 const st = child.sleepTimerState;
@@ -586,13 +582,11 @@
                 }
             }
 
-            // Update Sleep Modal view if open
             const sleepModalVal = document.getElementById('modalSleepTimerDisplay');
             if (sleepModalVal && child && child.sleepTimerState) {
                 sleepModalVal.innerText = formatDuration(getElapsedSleepTime(child.sleepTimerState));
             }
 
-            // Update Nursing Modal view if open
             const leftVal = document.getElementById('nursingLeftDisplay');
             const rightVal = document.getElementById('nursingRightDisplay');
             if (child && child.nursingState) {
@@ -601,7 +595,7 @@
             }
         }
 
-        /* --- Persistent Sleep Timer Methods --- */
+        /* --- Persistent Sleep Timer & Active Start-Time Editing --- */
         function openSleepTimerModal() {
             const child = getActiveChild();
             if (!child.sleepTimerState) {
@@ -610,15 +604,29 @@
             renderSleepModalContent();
         }
 
+        function getEffectiveSleepStartTime(st) {
+            if (!st) return Date.now();
+            if (st.isRunning && st.startTime) {
+                return st.startTime - (st.accumulatedMs || 0);
+            }
+            return Date.now() - (st.accumulatedMs || 0);
+        }
+
         function renderSleepModalContent() {
             const child = getActiveChild();
             const st = child.sleepTimerState;
             const elapsed = getElapsedSleepTime(st);
+            const effectiveStart = getEffectiveSleepStartTime(st);
 
             const html = `
-                <div class="text-center space-y-5">
+                <div class="text-center space-y-4">
                     <div id="modalSleepTimerDisplay" class="text-4xl font-black text-purple-600 tracking-tight">${formatDuration(elapsed)}</div>
                     
+                    <div class="bg-white p-3 rounded-2xl border border-gray-200 text-left space-y-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Timer Start Time</label>
+                        <input id="sleepStartTimeInput" type="datetime-local" value="${formatDateTimeLocal(effectiveStart)}" onchange="updateSleepStartTime(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs font-semibold text-gray-800">
+                    </div>
+
                     <div class="flex gap-2 justify-center">
                         ${!st.isRunning ? `
                             <button onclick="startSleepTimer()" class="flex-1 bg-purple-600 text-white font-bold py-3 rounded-xl shadow-xs active:scale-95 transition">
@@ -645,6 +653,23 @@
                 </div>
             `;
             openModal("Sleep Timer", html);
+        }
+
+        function updateSleepStartTime(newVal) {
+            if (!newVal) return;
+            const child = getActiveChild();
+            const st = child.sleepTimerState;
+            const newStartMs = new Date(newVal).getTime();
+            if (isNaN(newStartMs)) return;
+
+            if (st.isRunning) {
+                st.startTime = Date.now();
+                st.accumulatedMs = Math.max(0, Date.now() - newStartMs);
+            } else {
+                st.accumulatedMs = Math.max(0, Date.now() - newStartMs);
+            }
+            saveData();
+            updateActiveTimerUI();
         }
 
         function startSleepTimer() {
@@ -729,7 +754,6 @@
             const html = `
                 <div class="space-y-4 text-center">
                     <div class="grid grid-cols-2 gap-3">
-                        <!-- Left Breast Tile -->
                         <div class="bg-white p-3 rounded-2xl border ${ns.activeSide === 'left' ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200'} space-y-2">
                             <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Left Side</span>
                             <div id="nursingLeftDisplay" class="text-2xl font-black text-gray-800">${formatDuration(leftMs)}</div>
@@ -738,7 +762,6 @@
                             </button>
                         </div>
 
-                        <!-- Right Breast Tile -->
                         <div class="bg-white p-3 rounded-2xl border ${ns.activeSide === 'right' ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200'} space-y-2">
                             <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Right Side</span>
                             <div id="nursingRightDisplay" class="text-2xl font-black text-gray-800">${formatDuration(rightMs)}</div>
@@ -772,22 +795,18 @@
 
             const otherSide = side === 'left' ? 'right' : 'left';
 
-            // Pause the other side if active
             if (ns.activeSide === otherSide) {
                 ns[otherSide].accumulatedMs += (Date.now() - ns[otherSide].startTime);
                 ns[otherSide].isRunning = false;
                 ns[otherSide].startTime = null;
             }
 
-            // Toggle target side
             if (ns.activeSide === side) {
-                // Pause current
                 ns[side].accumulatedMs += (Date.now() - ns[side].startTime);
                 ns[side].isRunning = false;
                 ns[side].startTime = null;
                 ns.activeSide = null;
             } else {
-                // Start target
                 ns[side].isRunning = true;
                 ns[side].startTime = Date.now();
                 ns.activeSide = side;
@@ -813,7 +832,6 @@
             const ns = child.nursingState;
             if (!ns) return closeModal();
 
-            // Pause both to freeze exact times
             if (ns.activeSide) {
                 const s = ns.activeSide;
                 ns[s].accumulatedMs += (Date.now() - ns[s].startTime);
@@ -826,7 +844,6 @@
             const rightMin = Math.round(ns.right.accumulatedMs / 60000);
 
             if (leftMin === 0 && rightMin === 0 && (ns.left.accumulatedMs > 0 || ns.right.accumulatedMs > 0)) {
-                // Handle short sessions under 1 min
             } else if (leftMin === 0 && rightMin === 0) {
                 if (!confirm("No time logged on either side. Save empty entry?")) return;
             }
@@ -853,7 +870,82 @@
             closeModal();
         }
 
-        /* --- Existing Helper Methods --- */
+        /* --- Log Editing Functionality --- */
+        function openEditLogModal(id) {
+            const log = state.logs.find(l => l.id === id);
+            if (!log) return;
+
+            let specificFields = '';
+
+            if (log.type === 'bottle') {
+                specificFields = `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Amount (oz)</label>
+                        <input id="editAmount" type="number" step="0.5" value="${log.amount || 0}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-semibold">
+                    </div>
+                `;
+            } else if (log.type === 'diaper') {
+                specificFields = `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Diaper Type</label>
+                        <select id="editDiaperType" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-semibold">
+                            <option value="Wet" ${log.diaperType === 'Wet' ? 'selected' : ''}>Wet</option>
+                            <option value="Dirty" ${log.diaperType === 'Dirty' ? 'selected' : ''}>Dirty</option>
+                            <option value="Both" ${log.diaperType === 'Both' ? 'selected' : ''}>Both</option>
+                        </select>
+                    </div>
+                `;
+            } else if (log.type === 'nursing') {
+                specificFields = `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Side / Details</label>
+                        <input id="editSide" type="text" value="${log.side || ''}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-semibold">
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Log Date & Time</label>
+                        <input id="editStartTime" type="datetime-local" value="${formatDateTimeLocal(log.startTime)}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-semibold">
+                    </div>
+                    ${specificFields}
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Notes</label>
+                        <input id="editNotes" type="text" value="${log.notes || ''}" class="w-full mt-1 bg-white border border-gray-200 rounded-xl p-3 text-sm font-semibold">
+                    </div>
+                    <button onclick="saveEditedLog('${log.id}')" class="w-full bg-rose-500 text-white font-bold py-3 rounded-xl shadow-sm active:scale-95 transition text-sm">Save Changes</button>
+                </div>
+            `;
+
+            openModal(`Edit ${log.type.toUpperCase()} Log`, html);
+        }
+
+        function saveEditedLog(id) {
+            const log = state.logs.find(l => l.id === id);
+            if (!log) return;
+
+            const timeVal = document.getElementById('editStartTime')?.value;
+            if (timeVal) {
+                log.startTime = new Date(timeVal).getTime();
+            }
+
+            log.notes = document.getElementById('editNotes')?.value || '';
+
+            if (log.type === 'bottle') {
+                log.amount = parseFloat(document.getElementById('editAmount')?.value || 0);
+            } else if (log.type === 'diaper') {
+                log.diaperType = document.getElementById('editDiaperType')?.value || 'Wet';
+            } else if (log.type === 'nursing') {
+                log.side = document.getElementById('editSide')?.value || '';
+            }
+
+            saveData();
+            closeModal();
+        }
+
+        /* --- Logs & Helper Methods --- */
         function handleDateRangeChange() {
             const range = document.getElementById('filterDateRange').value;
             document.getElementById('customDateContainer').classList.toggle('hidden', range !== 'custom');
@@ -966,7 +1058,12 @@
                                 <div class="text-[10px] text-gray-400 mt-0.5">${dateStr} ${subtext ? '• ' + subtext : ''}</div>
                             </div>
                         </div>
-                        ${!isMassSelectMode ? `<button onclick="deleteLog('${log.id}')" class="text-gray-300 hover:text-rose-500 text-xs p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                        ${!isMassSelectMode ? `
+                            <div class="flex items-center gap-1">
+                                <button onclick="openEditLogModal('${log.id}')" class="text-gray-400 hover:text-blue-500 text-xs p-1"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                <button onclick="deleteLog('${log.id}')" class="text-gray-300 hover:text-rose-500 text-xs p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             });
