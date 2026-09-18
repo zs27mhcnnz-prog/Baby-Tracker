@@ -253,7 +253,7 @@
 
         let isMassSelectMode = false;
         let selectedLogIds = new Set();
-        let selectedCalDate = new Date();
+        let globalTimerInterval = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -262,7 +262,15 @@
                 document.getElementById('appContainer').classList.remove('hidden');
                 loadData();
             }
+            startGlobalTicker();
         });
+
+        function startGlobalTicker() {
+            if (globalTimerInterval) clearInterval(globalTimerInterval);
+            globalTimerInterval = setInterval(() => {
+                updateActiveTimerUI();
+            }, 1000);
+        }
 
         function switchView(view) {
             const isTracker = view === 'tracker';
@@ -375,6 +383,13 @@
             if (months > 0 || years > 0) parts.push(`${months} ${months === 1 ? 'mo' : 'mos'}`);
             parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
             return parts.join(', ');
+        }
+
+        function formatDuration(ms) {
+            const totalSec = Math.floor(ms / 1000);
+            const mins = Math.floor(totalSec / 60);
+            const secs = totalSec % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         function render() {
@@ -500,13 +515,18 @@
                 `;
             }
             if(child.showSleep !== false) {
-                const isSleeping = !!child.activeSleepStart;
+                const isSleeping = child.sleepTimerState && (child.sleepTimerState.isRunning || child.sleepTimerState.isPaused);
                 html += `
-                    <button onclick="openSleepTimer()" class="bg-gradient-to-b from-purple-50/50 to-white p-4 rounded-2xl shadow-sm border border-purple-100 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition">
+                    <button onclick="openSleepTimerModal()" class="bg-gradient-to-b from-purple-50/50 to-white p-4 rounded-2xl shadow-sm border border-purple-100 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition">
                         <div class="w-12 h-12 rounded-2xl ${isSleeping ? 'bg-purple-600 text-white animate-pulse' : 'bg-purple-500 text-white'} flex items-center justify-center shadow-xs">
                             <i data-lucide="moon-star" class="w-6 h-6"></i>
                         </div>
-                        <span class="text-xs font-bold text-gray-800">${isSleeping ? 'Sleeping...' : 'Sleep Timer'}</span>
+                        <div class="text-center">
+                            <span class="text-xs font-bold text-gray-800 block">${isSleeping ? 'Sleep Timer' : 'Sleep Timer'}</span>
+                            <span id="tileSleepTimerText" class="text-[10px] font-extrabold ${isSleeping ? 'text-purple-600' : 'text-gray-400'} block">
+                                ${isSleeping ? 'Active' : 'Tap to start'}
+                            </span>
+                        </div>
                     </button>
                 `;
             }
@@ -533,6 +553,307 @@
             grid.innerHTML = html;
         }
 
+        /* --- Global Live Ticker Update --- */
+        function getElapsedSleepTime(timer) {
+            if (!timer) return 0;
+            let total = timer.accumulatedMs || 0;
+            if (timer.isRunning && timer.startTime) {
+                total += (Date.now() - timer.startTime);
+            }
+            return total;
+        }
+
+        function getElapsedNursingTime(sideTimer) {
+            if (!sideTimer) return 0;
+            let total = sideTimer.accumulatedMs || 0;
+            if (sideTimer.isRunning && sideTimer.startTime) {
+                total += (Date.now() - sideTimer.startTime);
+            }
+            return total;
+        }
+
+        function updateActiveTimerUI() {
+            const child = getActiveChild();
+
+            // Update Tile Sleep text
+            const tileText = document.getElementById('tileSleepTimerText');
+            if (tileText && child && child.sleepTimerState) {
+                const st = child.sleepTimerState;
+                if (st.isRunning || st.isPaused) {
+                    tileText.innerText = (st.isPaused ? 'PAUSED ' : '') + formatDuration(getElapsedSleepTime(st));
+                } else {
+                    tileText.innerText = 'Tap to start';
+                }
+            }
+
+            // Update Sleep Modal view if open
+            const sleepModalVal = document.getElementById('modalSleepTimerDisplay');
+            if (sleepModalVal && child && child.sleepTimerState) {
+                sleepModalVal.innerText = formatDuration(getElapsedSleepTime(child.sleepTimerState));
+            }
+
+            // Update Nursing Modal view if open
+            const leftVal = document.getElementById('nursingLeftDisplay');
+            const rightVal = document.getElementById('nursingRightDisplay');
+            if (child && child.nursingState) {
+                if (leftVal) leftVal.innerText = formatDuration(getElapsedNursingTime(child.nursingState.left));
+                if (rightVal) rightVal.innerText = formatDuration(getElapsedNursingTime(child.nursingState.right));
+            }
+        }
+
+        /* --- Persistent Sleep Timer Methods --- */
+        function openSleepTimerModal() {
+            const child = getActiveChild();
+            if (!child.sleepTimerState) {
+                child.sleepTimerState = { isRunning: false, isPaused: false, startTime: null, accumulatedMs: 0 };
+            }
+            renderSleepModalContent();
+        }
+
+        function renderSleepModalContent() {
+            const child = getActiveChild();
+            const st = child.sleepTimerState;
+            const elapsed = getElapsedSleepTime(st);
+
+            const html = `
+                <div class="text-center space-y-5">
+                    <div id="modalSleepTimerDisplay" class="text-4xl font-black text-purple-600 tracking-tight">${formatDuration(elapsed)}</div>
+                    
+                    <div class="flex gap-2 justify-center">
+                        ${!st.isRunning ? `
+                            <button onclick="startSleepTimer()" class="flex-1 bg-purple-600 text-white font-bold py-3 rounded-xl shadow-xs active:scale-95 transition">
+                                ${st.isPaused ? 'Resume' : 'Start'}
+                            </button>
+                        ` : `
+                            <button onclick="pauseSleepTimer()" class="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl shadow-xs active:scale-95 transition">
+                                Pause
+                            </button>
+                        `}
+                        <button onclick="resetSleepTimer()" class="bg-gray-200 text-gray-700 font-bold px-4 py-3 rounded-xl active:scale-95 transition">
+                            Reset
+                        </button>
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-200 flex gap-2">
+                        <button onclick="minimizeSleepModal()" class="flex-1 bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-xl active:scale-95 transition text-xs">
+                            Minimize
+                        </button>
+                        <button onclick="saveAndCompleteSleepTimer()" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow-xs active:scale-95 transition text-xs">
+                            Save Sleep Entry
+                        </button>
+                    </div>
+                </div>
+            `;
+            openModal("Sleep Timer", html);
+        }
+
+        function startSleepTimer() {
+            const child = getActiveChild();
+            if (!child.sleepTimerState) child.sleepTimerState = { isRunning: false, isPaused: false, startTime: null, accumulatedMs: 0 };
+            child.sleepTimerState.isRunning = true;
+            child.sleepTimerState.isPaused = false;
+            child.sleepTimerState.startTime = Date.now();
+            saveData();
+            renderSleepModalContent();
+        }
+
+        function pauseSleepTimer() {
+            const child = getActiveChild();
+            const st = child.sleepTimerState;
+            if (st && st.isRunning) {
+                st.accumulatedMs += (Date.now() - st.startTime);
+                st.isRunning = false;
+                st.isPaused = true;
+                st.startTime = null;
+                saveData();
+                renderSleepModalContent();
+            }
+        }
+
+        function resetSleepTimer() {
+            const child = getActiveChild();
+            child.sleepTimerState = { isRunning: false, isPaused: false, startTime: null, accumulatedMs: 0 };
+            saveData();
+            renderSleepModalContent();
+        }
+
+        function minimizeSleepModal() { closeModal(); }
+
+        function saveAndCompleteSleepTimer() {
+            const child = getActiveChild();
+            const st = child.sleepTimerState;
+            if (!st) return closeModal();
+
+            const totalMs = getElapsedSleepTime(st);
+            if (totalMs < 10000) {
+                if (!confirm("Timer is under 10 seconds. Save anyway?")) return;
+            }
+
+            const endTime = Date.now();
+            const startTime = endTime - totalMs;
+
+            state.logs.push({
+                id: Date.now().toString(),
+                childId: child.id,
+                type: 'sleep',
+                startTime: startTime,
+                endTime: endTime,
+                notes: ''
+            });
+
+            child.sleepTimerState = { isRunning: false, isPaused: false, startTime: null, accumulatedMs: 0 };
+            saveData();
+            closeModal();
+        }
+
+        /* --- Dual Nursing Timer Methods --- */
+        function openNursingTimer() {
+            const child = getActiveChild();
+            if (!child.nursingState) {
+                child.nursingState = {
+                    left: { isRunning: false, startTime: null, accumulatedMs: 0 },
+                    right: { isRunning: false, startTime: null, accumulatedMs: 0 },
+                    activeSide: null
+                };
+            }
+            renderNursingModalContent();
+        }
+
+        function renderNursingModalContent() {
+            const child = getActiveChild();
+            const ns = child.nursingState;
+
+            const leftMs = getElapsedNursingTime(ns.left);
+            const rightMs = getElapsedNursingTime(ns.right);
+
+            const html = `
+                <div class="space-y-4 text-center">
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Left Breast Tile -->
+                        <div class="bg-white p-3 rounded-2xl border ${ns.activeSide === 'left' ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200'} space-y-2">
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Left Side</span>
+                            <div id="nursingLeftDisplay" class="text-2xl font-black text-gray-800">${formatDuration(leftMs)}</div>
+                            <button onclick="toggleNursingSide('left')" class="w-full ${ns.activeSide === 'left' ? 'bg-amber-500' : 'bg-rose-500'} text-white font-bold py-2 rounded-xl text-xs active:scale-95 transition">
+                                ${ns.activeSide === 'left' ? 'Pause Left' : 'Start Left'}
+                            </button>
+                        </div>
+
+                        <!-- Right Breast Tile -->
+                        <div class="bg-white p-3 rounded-2xl border ${ns.activeSide === 'right' ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200'} space-y-2">
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Right Side</span>
+                            <div id="nursingRightDisplay" class="text-2xl font-black text-gray-800">${formatDuration(rightMs)}</div>
+                            <button onclick="toggleNursingSide('right')" class="w-full ${ns.activeSide === 'right' ? 'bg-amber-500' : 'bg-rose-500'} text-white font-bold py-2 rounded-xl text-xs active:scale-95 transition">
+                                ${ns.activeSide === 'right' ? 'Pause Right' : 'Start Right'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase block text-left mb-1">Session Notes</label>
+                        <input id="nursingNotes" type="text" placeholder="Optional notes..." class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold">
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-200 flex gap-2">
+                        <button onclick="resetNursingTimer()" class="bg-gray-200 text-gray-700 font-bold px-4 py-2.5 rounded-xl text-xs active:scale-95 transition">
+                            Reset
+                        </button>
+                        <button onclick="saveNursingSession()" class="flex-1 bg-rose-500 text-white font-bold py-2.5 rounded-xl shadow-xs active:scale-95 transition text-xs">
+                            Save Nursing Log
+                        </button>
+                    </div>
+                </div>
+            `;
+            openModal("Nursing Session", html);
+        }
+
+        function toggleNursingSide(side) {
+            const child = getActiveChild();
+            const ns = child.nursingState;
+
+            const otherSide = side === 'left' ? 'right' : 'left';
+
+            // Pause the other side if active
+            if (ns.activeSide === otherSide) {
+                ns[otherSide].accumulatedMs += (Date.now() - ns[otherSide].startTime);
+                ns[otherSide].isRunning = false;
+                ns[otherSide].startTime = null;
+            }
+
+            // Toggle target side
+            if (ns.activeSide === side) {
+                // Pause current
+                ns[side].accumulatedMs += (Date.now() - ns[side].startTime);
+                ns[side].isRunning = false;
+                ns[side].startTime = null;
+                ns.activeSide = null;
+            } else {
+                // Start target
+                ns[side].isRunning = true;
+                ns[side].startTime = Date.now();
+                ns.activeSide = side;
+            }
+
+            saveData();
+            renderNursingModalContent();
+        }
+
+        function resetNursingTimer() {
+            const child = getActiveChild();
+            child.nursingState = {
+                left: { isRunning: false, startTime: null, accumulatedMs: 0 },
+                right: { isRunning: false, startTime: null, accumulatedMs: 0 },
+                activeSide: null
+            };
+            saveData();
+            renderNursingModalContent();
+        }
+
+        function saveNursingSession() {
+            const child = getActiveChild();
+            const ns = child.nursingState;
+            if (!ns) return closeModal();
+
+            // Pause both to freeze exact times
+            if (ns.activeSide) {
+                const s = ns.activeSide;
+                ns[s].accumulatedMs += (Date.now() - ns[s].startTime);
+                ns[s].isRunning = false;
+                ns[s].startTime = null;
+                ns.activeSide = null;
+            }
+
+            const leftMin = Math.round(ns.left.accumulatedMs / 60000);
+            const rightMin = Math.round(ns.right.accumulatedMs / 60000);
+
+            if (leftMin === 0 && rightMin === 0 && (ns.left.accumulatedMs > 0 || ns.right.accumulatedMs > 0)) {
+                // Handle short sessions under 1 min
+            } else if (leftMin === 0 && rightMin === 0) {
+                if (!confirm("No time logged on either side. Save empty entry?")) return;
+            }
+
+            const notesInput = document.getElementById('nursingNotes')?.value || '';
+            const sidesSummary = `L: ${leftMin}m | R: ${rightMin}m`;
+
+            state.logs.push({
+                id: Date.now().toString(),
+                childId: child.id,
+                type: 'nursing',
+                side: sidesSummary,
+                startTime: Date.now(),
+                notes: notesInput
+            });
+
+            child.nursingState = {
+                left: { isRunning: false, startTime: null, accumulatedMs: 0 },
+                right: { isRunning: false, startTime: null, accumulatedMs: 0 },
+                activeSide: null
+            };
+
+            saveData();
+            closeModal();
+        }
+
+        /* --- Existing Helper Methods --- */
         function handleDateRangeChange() {
             const range = document.getElementById('filterDateRange').value;
             document.getElementById('customDateContainer').classList.toggle('hidden', range !== 'custom');
@@ -742,55 +1063,6 @@
             state.logs.push(log);
             closeModal();
             saveData();
-        }
-
-        function openNursingTimer() {
-            const activeChild = getActiveChild();
-            const html = `
-                <div class="text-center space-y-4">
-                    <div id="nursingTimerDisplay" class="text-3xl font-black text-gray-800">00:00</div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="saveNursingLog('Left')" class="bg-rose-50 text-rose-600 font-bold py-3 rounded-xl border border-rose-100 active:scale-95 transition">Left Side</button>
-                        <button onclick="saveNursingLog('Right')" class="bg-rose-50 text-rose-600 font-bold py-3 rounded-xl border border-rose-100 active:scale-95 transition">Right Side</button>
-                    </div>
-                </div>
-            `;
-            openModal("Nursing Session", html);
-        }
-
-        function saveNursingLog(side) {
-            const activeChild = getActiveChild();
-            state.logs.push({
-                id: Date.now().toString(),
-                childId: activeChild.id,
-                type: 'nursing',
-                side: side,
-                startTime: Date.now(),
-                notes: ''
-            });
-            closeModal();
-            saveData();
-        }
-
-        function openSleepTimer() {
-            const child = getActiveChild();
-            if (child.activeSleepStart) {
-                const durationMinutes = Math.round((Date.now() - child.activeSleepStart) / 60000);
-                if (confirm(`End sleep timer? Total duration: ${durationMinutes} mins`)) {
-                    state.logs.push({
-                        id: Date.now().toString(),
-                        childId: child.id,
-                        type: 'sleep',
-                        startTime: child.activeSleepStart,
-                        endTime: Date.now()
-                    });
-                    delete child.activeSleepStart;
-                    saveData();
-                }
-            } else {
-                child.activeSleepStart = Date.now();
-                saveData();
-            }
         }
 
         function openCalendarModal() {
